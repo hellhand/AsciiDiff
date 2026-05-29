@@ -189,8 +189,8 @@ pub fn render_asciidoc(source: &str) -> String {
 /// Compute a word-level diff between two rendered HTML strings and produce
 /// side-by-side HTML with diff highlighting classes matching the mock.
 pub fn compute_diff_html(left_text: &str, right_text: &str) -> (String, String) {
-    let left_html = render_asciidoc(left_text);
-    let right_html = render_asciidoc(right_text);
+    let _left_html = render_asciidoc(left_text);
+    let _right_html = render_asciidoc(right_text);
 
     // For a simple first pass, we diff at the line level of the source text
     // and then mark which rendered sections have changes

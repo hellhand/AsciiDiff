@@ -22,5 +22,5 @@ tauri = { version = "2.11.2", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-shell = "2"
-git2 = "0.20"
-similar = "2.6"
+git2 = "0.21"
+similar = "3"
