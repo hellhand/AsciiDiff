@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { appState, diffStats } from '../stores/app';
+  import { appState } from '../stores/app';
   import { invoke } from '@tauri-apps/api/core';
   import { open } from '@tauri-apps/plugin-dialog';
 
@@ -10,7 +10,6 @@
   } = $props();
 
   let state = $derived($appState);
-  let stats = $derived($diffStats);
 
   async function openRepo() {
     const selected = await open({ directory: true, multiple: false });
@@ -31,16 +30,16 @@
     }
   }
 
-  function setView(mode: 'split' | 'unified' | 'preview') {
-    appState.update(s => ({ ...s, viewMode: mode }));
+  function setLayout(layout: 'split' | 'unified') {
+    appState.update(s => ({ ...s, layout }));
+  }
+
+  function toggleSource() {
+    appState.update(s => ({ ...s, showSource: !s.showSource }));
   }
 
   function toggleHighlight() {
     appState.update(s => ({ ...s, highlight: !s.highlight }));
-  }
-
-  function toggleCollapse() {
-    appState.update(s => ({ ...s, collapse: !s.collapse }));
   }
 
   function toggleSync() {
@@ -74,36 +73,28 @@
 
   <!-- View modes -->
   <div class="view-mode-group">
-    <button class="tb-btn" class:active={state.viewMode === 'split'} onclick={() => setView('split')}>
+    <button class="tb-btn" class:active={state.layout === 'split'} onclick={() => setLayout('split')}>
       <i class="ti ti-layout-columns"></i> Split
     </button>
-    <button class="tb-btn" class:active={state.viewMode === 'unified'} onclick={() => setView('unified')}>
+    <button class="tb-btn" class:active={state.layout === 'unified'} onclick={() => setLayout('unified')}>
       <i class="ti ti-file-diff"></i> Unified
-    </button>
-    <button class="tb-btn" class:active={state.viewMode === 'preview'} onclick={() => setView('preview')}>
-      <i class="ti ti-eye"></i> Preview
     </button>
   </div>
   <div class="tb-sep"></div>
 
+  <button class="tb-btn" class:active={state.showSource} onclick={toggleSource}>
+    <i class="ti ti-code"></i> Source
+  </button>
+  <div class="tb-sep"></div>
+
   <button class="tb-btn" class:active={state.highlight} onclick={toggleHighlight}>
     <i class="ti ti-highlight"></i> Highlight
-  </button>
-  <button class="tb-btn" class:active={state.collapse} onclick={toggleCollapse}>
-    <i class="ti ti-fold"></i> Collapse unchanged
   </button>
   <button class="tb-btn" class:active={state.syncScroll} onclick={toggleSync}>
     <i class="ti ti-arrows-right-left"></i> Sync scroll
   </button>
 
   <div class="tb-spacer"></div>
-
-  <div class="diff-stats">
-    <span class="stat-badge stat-add">+{stats.added} added</span>
-    <span class="stat-badge stat-del">&minus;{stats.deleted} removed</span>
-    <span class="stat-badge stat-mod">~{stats.modified} modified</span>
-  </div>
-  <div class="tb-sep"></div>
 
   <button class="tb-btn" onclick={() => settingsOpen = true}>
     <i class="ti ti-settings"></i>
@@ -151,9 +142,4 @@
   }
   .swap-btn:hover { background: var(--bg4); color: var(--text); }
   .view-mode-group { display: flex; gap: 2px; }
-  .diff-stats { display: flex; align-items: center; gap: 6px; }
-  .stat-badge { font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 10px; }
-  .stat-add { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-border); }
-  .stat-del { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-border); }
-  .stat-mod { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-border); }
 </style>

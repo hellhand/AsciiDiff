@@ -18,10 +18,9 @@ test.describe('AsciiDiff App Shell', () => {
     // View mode buttons
     await expect(page.getByText('Split')).toBeVisible();
     await expect(page.getByText('Unified')).toBeVisible();
-    await expect(page.getByText('Preview')).toBeVisible();
+    await expect(page.getByText('Source')).toBeVisible();
     // Toggle buttons
     await expect(page.getByText('Highlight')).toBeVisible();
-    await expect(page.getByText('Collapse unchanged')).toBeVisible();
     await expect(page.getByText('Sync scroll')).toBeVisible();
   });
 
@@ -43,11 +42,6 @@ test.describe('AsciiDiff App Shell', () => {
     await expect(page.locator('#statusbar')).toContainText('deletions');
   });
 
-  test('renders diff stats badges', async ({ page }) => {
-    await expect(page.locator('.stat-add')).toBeVisible();
-    await expect(page.locator('.stat-del')).toBeVisible();
-    await expect(page.locator('.stat-mod')).toBeVisible();
-  });
 });
 
 test.describe('View Mode Switching', () => {
@@ -64,16 +58,6 @@ test.describe('View Mode Switching', () => {
     }
   });
 
-  test('preview mode hides left panel', async ({ page }) => {
-    await page.getByText('Preview').click();
-    // Wait for state update
-    await page.waitForTimeout(100);
-    const panels = page.locator('#panels .panel');
-    // In preview mode only 1 panel is visible
-    const count = await panels.count();
-    expect(count).toBe(1);
-  });
-
   test('unified mode hides left panel', async ({ page }) => {
     await page.getByText('Unified').click();
     await page.waitForTimeout(100);
@@ -83,7 +67,7 @@ test.describe('View Mode Switching', () => {
   });
 
   test('clicking split returns to split view', async ({ page }) => {
-    await page.getByText('Preview').click();
+    await page.getByText('Unified').click();
     await page.waitForTimeout(100);
     await page.getByText('Split').click();
     await page.waitForTimeout(100);
@@ -192,10 +176,5 @@ test.describe('Toolbar Toggle Buttons', () => {
   test('sync scroll button starts active', async ({ page }) => {
     const btn = page.locator('.tb-btn', { hasText: 'Sync scroll' });
     await expect(btn).toHaveClass(/active/);
-  });
-
-  test('collapse unchanged button starts inactive', async ({ page }) => {
-    const btn = page.locator('.tb-btn', { hasText: 'Collapse unchanged' });
-    await expect(btn).not.toHaveClass(/active/);
   });
 });

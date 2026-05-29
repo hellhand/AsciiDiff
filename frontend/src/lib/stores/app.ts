@@ -19,12 +19,14 @@ export interface AppState {
   rightBranch: string;
   changedFiles: ChangedFile[];
   activeFileIdx: number;
-  viewMode: 'split' | 'unified' | 'preview';
+  layout: 'split' | 'unified';
+  showSource: boolean;
   highlight: boolean;
-  collapse: boolean;
   syncScroll: boolean;
   leftContent: string;
   rightContent: string;
+  leftSource: string;
+  rightSource: string;
   leftExists: boolean;
   rightExists: boolean;
 }
@@ -36,21 +38,19 @@ const initialState: AppState = {
   rightBranch: '',
   changedFiles: [],
   activeFileIdx: 0,
-  viewMode: 'split',
+  layout: 'split',
+  showSource: false,
   highlight: true,
-  collapse: false,
   syncScroll: true,
   leftContent: '',
   rightContent: '',
+  leftSource: '',
+  rightSource: '',
   leftExists: false,
   rightExists: false,
 };
 
 export const appState = writable<AppState>(initialState);
-
-export const activeFile = derived(appState, ($s) =>
-  $s.changedFiles[$s.activeFileIdx] ?? null
-);
 
 export const diffStats = derived(appState, ($s) => {
   const files = $s.changedFiles;

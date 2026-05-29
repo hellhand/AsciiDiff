@@ -3,34 +3,54 @@
   import { onMount } from 'svelte';
 
   let state = $derived($appState);
-  let panelLeft: HTMLElement;
-  let panelRight: HTMLElement;
+  let panelLeft = $state<HTMLElement | null>(null);
+  let panelRight = $state<HTMLElement | null>(null);
   let syncing = false;
+  let splitPercent = $state(50);
+  let dragging = $state(false);
+  let panelsEl: HTMLElement;
 
-  function setupScrollSync() {
-    if (!panelLeft || !panelRight) return;
+  function startDrag(e: MouseEvent) {
+    e.preventDefault();
+    dragging = true;
 
-    panelLeft.onscroll = () => {
-      if (!state.syncScroll || syncing) return;
-      syncing = true;
-      const ratio = panelLeft.scrollTop / (panelLeft.scrollHeight - panelLeft.clientHeight || 1);
-      panelRight.scrollTop = ratio * (panelRight.scrollHeight - panelRight.clientHeight);
-      requestAnimationFrame(() => syncing = false);
-    };
+    function onMove(ev: MouseEvent) {
+      if (!panelsEl) return;
+      const rect = panelsEl.getBoundingClientRect();
+      const pct = ((ev.clientX - rect.left) / rect.width) * 100;
+      splitPercent = Math.max(20, Math.min(80, pct));
+    }
 
-    panelRight.onscroll = () => {
-      if (!state.syncScroll || syncing) return;
-      syncing = true;
-      const ratio = panelRight.scrollTop / (panelRight.scrollHeight - panelRight.clientHeight || 1);
-      panelLeft.scrollTop = ratio * (panelLeft.scrollHeight - panelLeft.clientHeight);
-      requestAnimationFrame(() => syncing = false);
-    };
+    function onUp() {
+      dragging = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
   }
 
   $effect(() => {
-    // Re-setup scroll sync when syncScroll changes
-    state.syncScroll;
-    setupScrollSync();
+    const left = panelLeft;
+    const right = panelRight;
+    if (!left || !right) return;
+
+    left.onscroll = () => {
+      if (!state.syncScroll || syncing) return;
+      syncing = true;
+      const ratio = left.scrollTop / (left.scrollHeight - left.clientHeight || 1);
+      right.scrollTop = ratio * (right.scrollHeight - right.clientHeight);
+      requestAnimationFrame(() => syncing = false);
+    };
+
+    right.onscroll = () => {
+      if (!state.syncScroll || syncing) return;
+      syncing = true;
+      const ratio = right.scrollTop / (right.scrollHeight - right.clientHeight || 1);
+      left.scrollTop = ratio * (left.scrollHeight - left.clientHeight);
+      requestAnimationFrame(() => syncing = false);
+    };
   });
 
   let activeFile = $derived(state.changedFiles[state.activeFileIdx] ?? null);
@@ -56,7 +76,6 @@
     setTimeout(() => { el.style.outline = ''; }, 600);
   }
 
-  // Listen for keyboard diff navigation
   function handleKeydown(e: KeyboardEvent) {
     const mod = e.metaKey || e.ctrlKey;
     if (mod && e.key === 'ArrowDown') { e.preventDefault(); jumpDiff(1); }
@@ -88,11 +107,15 @@
       <span class="commit-tag ct-r">{rightRef()}</span>
     </div>
   </div>
-  <div id="panels">
-    {#if state.viewMode !== 'preview' && state.viewMode !== 'unified'}
-      <div class="panel" bind:this={panelLeft}>
+  <div id="panels" bind:this={panelsEl} class:dragging>
+    {#if state.layout === 'split'}
+      <div class="panel" bind:this={panelLeft} style="flex: 0 0 {splitPercent}%">
         {#if state.leftExists}
-          {@html state.leftContent}
+          {#if state.showSource}
+            <pre class="source-view">{state.leftSource}</pre>
+          {:else}
+            {@html state.leftContent}
+          {/if}
         {:else if activeFile}
           <div class="empty-panel">
             <i class="ti ti-file-off"></i>
@@ -105,10 +128,18 @@
           </div>
         {/if}
       </div>
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="split-handle" onmousedown={startDrag}>
+        <div class="split-handle-line"></div>
+      </div>
     {/if}
-    <div class="panel" bind:this={panelRight}>
+    <div class="panel" bind:this={panelRight} style={state.layout === 'split' ? `flex: 1` : ''}>
       {#if state.rightExists}
-        {@html state.rightContent}
+        {#if state.showSource}
+          <pre class="source-view">{state.rightSource}</pre>
+        {:else}
+          {@html state.rightContent}
+        {/if}
       {:else if activeFile}
         <div class="empty-panel">
           <i class="ti ti-file-off"></i>
@@ -148,11 +179,23 @@
   }
   .nav-arrow:hover { background: var(--bg4); color: var(--text); }
   #panels { display: flex; flex: 1; overflow: hidden; }
+  #panels.dragging { cursor: col-resize; user-select: none; }
   .panel {
     flex: 1; overflow-y: auto; overflow-x: hidden;
     background: var(--bg); min-width: 0;
   }
-  .panel:first-child { border-right: 1px solid var(--border); }
+  .split-handle {
+    width: 5px; flex-shrink: 0; cursor: col-resize;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--bg2); border-left: 1px solid var(--border); border-right: 1px solid var(--border);
+    transition: background .15s;
+  }
+  .split-handle:hover, #panels.dragging .split-handle {
+    background: var(--bg4);
+  }
+  .split-handle-line {
+    width: 1px; height: 32px; background: var(--border2); border-radius: 1px;
+  }
   .empty-panel {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
     min-height: 300px; color: var(--text3); gap: 12px;
@@ -160,4 +203,15 @@
   .empty-panel i { font-size: 40px; opacity: .4; }
   .empty-panel p { font-size: 13px; }
   .empty-panel strong { color: var(--text2); }
+  .source-view {
+    padding: 20px 24px;
+    font-family: var(--mono);
+    font-size: var(--content-font-size);
+    line-height: var(--content-line-height);
+    color: var(--text2);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+    background: transparent;
+  }
 </style>

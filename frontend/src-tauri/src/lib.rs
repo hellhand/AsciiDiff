@@ -31,6 +31,8 @@ async fn get_file_content(
 struct RenderedDiff {
     left_html: String,
     right_html: String,
+    left_source: String,
+    right_source: String,
     left_exists: bool,
     right_exists: bool,
 }
@@ -72,6 +74,8 @@ async fn render_diff(
     Ok(RenderedDiff {
         left_html,
         right_html,
+        left_source: left_resolved,
+        right_source: right_resolved,
         left_exists: left.exists,
         right_exists: right.exists,
     })

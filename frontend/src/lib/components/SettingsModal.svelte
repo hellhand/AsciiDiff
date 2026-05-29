@@ -1,7 +1,11 @@
 <script lang="ts">
+  import { settings } from '../stores/settings';
+  import Dropdown from './Dropdown.svelte';
+
   let { onclose }: { onclose: () => void } = $props();
 
   let activeTab = $state('rendering');
+  let s = $derived($settings);
 
   const tabs = [
     { id: 'rendering', icon: 'ti-eye', label: 'Rendering' },
@@ -15,6 +19,14 @@
 
   function handleBackdrop(e: MouseEvent) {
     if (e.target === e.currentTarget) onclose();
+  }
+
+  function set(key: string, value: any) {
+    settings.update({ [key]: value });
+  }
+
+  function toggleBool(key: string) {
+    settings.update({ [key]: !(s as any)[key] });
   }
 </script>
 
@@ -36,19 +48,37 @@
           <div class="s-section-title">AsciiDoc rendering</div>
           <div class="s-row">
             <div class="s-label"><p>Backend</p><span>Rendering engine for HTML output</span></div>
-            <select class="s-select"><option>Asciidoctor.js (browser)</option><option>Asciidoctor (native)</option></select>
+            <Dropdown
+              value={s.renderBackend}
+              options={[
+                { value: 'asciidoctor-js', label: 'Asciidoctor.js (browser)' },
+                { value: 'asciidoctor-native', label: 'Asciidoctor (native)' },
+              ]}
+              onchange={(v) => set('renderBackend', v)}
+            />
           </div>
           <div class="s-row">
             <div class="s-label"><p>Safe mode</p><span>Controls which features are allowed</span></div>
-            <select class="s-select"><option>unsafe</option><option>safe</option><option>server</option><option>secure</option></select>
+            <Dropdown
+              value={s.safeMode}
+              options={[
+                { value: 'unsafe', label: 'unsafe' },
+                { value: 'safe', label: 'safe' },
+                { value: 'server', label: 'server' },
+                { value: 'secure', label: 'secure' },
+              ]}
+              onchange={(v) => set('safeMode', v)}
+            />
           </div>
           <div class="s-row">
             <div class="s-label"><p>Resolve include:: directives</p><span>Follow include paths relative to repo root</span></div>
-            <div class="toggle on"><div class="toggle-knob"></div></div>
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="toggle" class:on={s.resolveIncludes} onclick={() => toggleBool('resolveIncludes')} onkeydown={() => {}}><div class="toggle-knob"></div></div>
           </div>
           <div class="s-row">
             <div class="s-label"><p>Evaluate ifdef:: conditionals</p><span>Process preprocessor conditionals before diffing</span></div>
-            <div class="toggle on"><div class="toggle-knob"></div></div>
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="toggle" class:on={s.evaluateIfdefs} onclick={() => toggleBool('evaluateIfdefs')} onkeydown={() => {}}><div class="toggle-knob"></div></div>
           </div>
         </div>
       {:else if activeTab === 'includes'}
@@ -56,19 +86,30 @@
           <div class="s-section-title">Include resolution</div>
           <div class="s-row">
             <div class="s-label"><p>Base directory</p><span>Root path used to resolve include:: paths</span></div>
-            <input type="text" class="s-input" value="./docs">
+            <input type="text" class="s-input" value={s.includeBaseDir} onchange={(e) => set('includeBaseDir', e.currentTarget.value)}>
           </div>
           <div class="s-row">
             <div class="s-label"><p>Resolve from git object store</p><span>Read include targets from the git history, not disk</span></div>
-            <div class="toggle on"><div class="toggle-knob"></div></div>
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="toggle" class:on={s.resolveFromGit} onclick={() => toggleBool('resolveFromGit')} onkeydown={() => {}}><div class="toggle-knob"></div></div>
           </div>
           <div class="s-row">
             <div class="s-label"><p>Show unresolved includes</p><span>Display a warning banner for broken include paths</span></div>
-            <div class="toggle on"><div class="toggle-knob"></div></div>
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="toggle" class:on={s.showUnresolvedIncludes} onclick={() => toggleBool('showUnresolvedIncludes')} onkeydown={() => {}}><div class="toggle-knob"></div></div>
           </div>
           <div class="s-row">
             <div class="s-label"><p>Max include depth</p><span>Prevent infinite include loops</span></div>
-            <select class="s-select"><option>4</option><option>8</option><option>16</option><option>Unlimited</option></select>
+            <Dropdown
+              value={s.maxIncludeDepth === Infinity ? 'Infinity' : String(s.maxIncludeDepth)}
+              options={[
+                { value: '4', label: '4' },
+                { value: '8', label: '8' },
+                { value: '16', label: '16' },
+                { value: 'Infinity', label: 'Unlimited' },
+              ]}
+              onchange={(v) => set('maxIncludeDepth', v === 'Infinity' ? Infinity : Number(v))}
+            />
           </div>
         </div>
       {:else if activeTab === 'git'}
@@ -76,15 +117,17 @@
           <div class="s-section-title">Git integration</div>
           <div class="s-row">
             <div class="s-label"><p>Default base branch</p><span>Branch to compare against by default</span></div>
-            <input type="text" class="s-input" value="main">
+            <input type="text" class="s-input" value={s.defaultBaseBranch} onchange={(e) => set('defaultBaseBranch', e.currentTarget.value)}>
           </div>
           <div class="s-row">
             <div class="s-label"><p>Auto-refresh on branch change</p><span>Re-render when the git HEAD changes</span></div>
-            <div class="toggle on"><div class="toggle-knob"></div></div>
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="toggle" class:on={s.autoRefreshOnBranchChange} onclick={() => toggleBool('autoRefreshOnBranchChange')} onkeydown={() => {}}><div class="toggle-knob"></div></div>
           </div>
           <div class="s-row">
             <div class="s-label"><p>Show commit metadata</p><span>Display author, date, and message in the header</span></div>
-            <div class="toggle on"><div class="toggle-knob"></div></div>
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="toggle" class:on={s.showCommitMetadata} onclick={() => toggleBool('showCommitMetadata')} onkeydown={() => {}}><div class="toggle-knob"></div></div>
           </div>
         </div>
       {:else if activeTab === 'syntax'}
@@ -92,19 +135,39 @@
           <div class="s-section-title">Syntax highlighting</div>
           <div class="s-row">
             <div class="s-label"><p>Highlighter</p><span>Library used for code block coloring</span></div>
-            <select class="s-select"><option>Rouge (built-in)</option><option>highlight.js</option><option>Prism</option><option>None</option></select>
+            <Dropdown
+              value={s.highlighter}
+              options={[
+                { value: 'rouge', label: 'Rouge (built-in)' },
+                { value: 'highlightjs', label: 'highlight.js' },
+                { value: 'prism', label: 'Prism' },
+                { value: 'none', label: 'None' },
+              ]}
+              onchange={(v) => set('highlighter', v)}
+            />
           </div>
           <div class="s-row">
             <div class="s-label"><p>Theme</p><span>Color theme for code blocks</span></div>
-            <select class="s-select"><option>Monokai</option><option>GitHub Dark</option><option>One Dark</option><option>Dracula</option></select>
+            <Dropdown
+              value={s.syntaxTheme}
+              options={[
+                { value: 'monokai', label: 'Monokai' },
+                { value: 'github-dark', label: 'GitHub Dark' },
+                { value: 'one-dark', label: 'One Dark' },
+                { value: 'dracula', label: 'Dracula' },
+              ]}
+              onchange={(v) => set('syntaxTheme', v)}
+            />
           </div>
           <div class="s-row">
             <div class="s-label"><p>Show line numbers</p><span>Prefix code lines with their line number</span></div>
-            <div class="toggle"><div class="toggle-knob"></div></div>
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="toggle" class:on={s.showLineNumbers} onclick={() => toggleBool('showLineNumbers')} onkeydown={() => {}}><div class="toggle-knob"></div></div>
           </div>
           <div class="s-row">
             <div class="s-label"><p>Word-wrap in code blocks</p><span>Wrap long lines instead of scrolling</span></div>
-            <div class="toggle"><div class="toggle-knob"></div></div>
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="toggle" class:on={s.wordWrapCode} onclick={() => toggleBool('wordWrapCode')} onkeydown={() => {}}><div class="toggle-knob"></div></div>
           </div>
         </div>
       {:else if activeTab === 'diff'}
@@ -112,19 +175,38 @@
           <div class="s-section-title">Diff display</div>
           <div class="s-row">
             <div class="s-label"><p>Granularity</p><span>How precisely inline changes are highlighted</span></div>
-            <select class="s-select"><option>Word-level</option><option>Character-level</option><option>Block-level</option></select>
+            <Dropdown
+              value={s.diffGranularity}
+              options={[
+                { value: 'word', label: 'Word-level' },
+                { value: 'character', label: 'Character-level' },
+                { value: 'block', label: 'Block-level' },
+              ]}
+              onchange={(v) => set('diffGranularity', v)}
+            />
           </div>
           <div class="s-row">
             <div class="s-label"><p>Ignore whitespace</p><span>Treat whitespace-only changes as equal</span></div>
-            <div class="toggle on"><div class="toggle-knob"></div></div>
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="toggle" class:on={s.ignoreWhitespace} onclick={() => toggleBool('ignoreWhitespace')} onkeydown={() => {}}><div class="toggle-knob"></div></div>
           </div>
           <div class="s-row">
             <div class="s-label"><p>Context lines</p><span>Unchanged lines shown around each change</span></div>
-            <select class="s-select"><option>3</option><option>5</option><option>10</option><option>All</option></select>
+            <Dropdown
+              value={s.contextLines === Infinity ? 'all' : String(s.contextLines)}
+              options={[
+                { value: '3', label: '3' },
+                { value: '5', label: '5' },
+                { value: '10', label: '10' },
+                { value: 'all', label: 'All' },
+              ]}
+              onchange={(v) => set('contextLines', v === 'all' ? Infinity : Number(v))}
+            />
           </div>
           <div class="s-row">
             <div class="s-label"><p>Synchronized scrolling</p><span>Keep both panels at the same scroll position</span></div>
-            <div class="toggle on"><div class="toggle-knob"></div></div>
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="toggle" class:on={s.syncScrolling} onclick={() => toggleBool('syncScrolling')} onkeydown={() => {}}><div class="toggle-knob"></div></div>
           </div>
         </div>
       {:else if activeTab === 'keys'}
@@ -148,19 +230,52 @@
           <div class="s-section-title">Appearance</div>
           <div class="s-row">
             <div class="s-label"><p>Theme</p><span>Application color theme</span></div>
-            <select class="s-select"><option>Dark (default)</option><option>Light</option><option>System</option></select>
+            <Dropdown
+              value={s.theme}
+              options={[
+                { value: 'dark', label: 'Dark (default)' },
+                { value: 'light', label: 'Light' },
+                { value: 'system', label: 'System' },
+              ]}
+              onchange={(v) => set('theme', v)}
+            />
           </div>
           <div class="s-row">
             <div class="s-label"><p>Font size</p><span>Base font size for rendered documents</span></div>
-            <select class="s-select"><option>12px</option><option selected>13px</option><option>14px</option><option>15px</option></select>
+            <Dropdown
+              value={String(s.fontSize)}
+              options={[
+                { value: '12', label: '12px' },
+                { value: '13', label: '13px' },
+                { value: '14', label: '14px' },
+                { value: '15', label: '15px' },
+              ]}
+              onchange={(v) => set('fontSize', Number(v))}
+            />
           </div>
           <div class="s-row">
             <div class="s-label"><p>Line height</p><span>Spacing between lines in rendered text</span></div>
-            <select class="s-select"><option>1.5</option><option selected>1.75</option><option>2.0</option></select>
+            <Dropdown
+              value={String(s.lineHeight)}
+              options={[
+                { value: '1.5', label: '1.5' },
+                { value: '1.75', label: '1.75' },
+                { value: '2', label: '2.0' },
+              ]}
+              onchange={(v) => set('lineHeight', Number(v))}
+            />
           </div>
           <div class="s-row">
             <div class="s-label"><p>Sidebar width</p><span>Width of the file tree sidebar in pixels</span></div>
-            <select class="s-select"><option>180px</option><option selected>220px</option><option>260px</option></select>
+            <Dropdown
+              value={String(s.sidebarWidth)}
+              options={[
+                { value: '180', label: '180px' },
+                { value: '220', label: '220px' },
+                { value: '260', label: '260px' },
+              ]}
+              onchange={(v) => set('sidebarWidth', Number(v))}
+            />
           </div>
         </div>
       {/if}
@@ -193,9 +308,8 @@
   .s-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
   .s-label p { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
   .s-label span { font-size: 11px; color: var(--text3); line-height: 1.4; }
-  .s-select { height: 28px; padding: 0 8px; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text); font-size: 12px; min-width: 160px; outline: none; cursor: pointer; }
-  .s-select:focus { border-color: var(--accent); }
   .s-input { height: 28px; padding: 0 8px; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text); font-family: var(--mono); font-size: 11px; width: 200px; outline: none; }
+  .s-input:focus { border-color: var(--accent); }
   .toggle { width: 34px; height: 18px; border-radius: 9px; background: var(--bg4); border: 1px solid var(--border2); position: relative; cursor: pointer; flex-shrink: 0; margin-top: 2px; transition: background .2s; }
   .toggle.on { background: var(--accent); border-color: var(--accent); }
   .toggle-knob { width: 12px; height: 12px; border-radius: 50%; background: var(--text3); position: absolute; top: 2px; left: 2px; transition: left .2s, background .2s; }

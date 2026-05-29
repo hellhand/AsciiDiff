@@ -55,6 +55,8 @@
             ...s,
             leftContent: result.left_html,
             rightContent: result.right_html,
+            leftSource: result.left_source,
+            rightSource: result.right_source,
             leftExists: result.left_exists,
             rightExists: result.right_exists,
           }));
