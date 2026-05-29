@@ -7,12 +7,7 @@
   );
 </script>
 
-<div id="titlebar" data-tauri-drag-region>
-  <div class="traffic">
-    <div class="dot dot-r"></div>
-    <div class="dot dot-y"></div>
-    <div class="dot dot-g"></div>
-  </div>
+<div id="titlebar">
   <span class="app-name">AsciiDiff</span>
   <span class="sep">&rsaquo;</span>
   <span class="file-name">{filename}</span>
@@ -30,12 +25,7 @@
     padding: 0 14px;
     user-select: none;
   }
-  .traffic { display: flex; gap: 6px; }
-  .dot { width: 12px; height: 12px; border-radius: 50%; }
-  .dot-r { background: #ff5f57; }
-  .dot-y { background: #febc2e; }
-  .dot-g { background: #28c840; }
-  .app-name { font-size: 12px; font-weight: 500; color: var(--text2); margin-left: 4px; letter-spacing: .02em; }
+  .app-name { font-size: 12px; font-weight: 500; color: var(--text2); letter-spacing: .02em; }
   .file-name { font-size: 12px; color: var(--text3); }
   .sep { color: var(--text3); font-size: 10px; }
 </style>

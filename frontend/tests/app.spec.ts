@@ -8,6 +8,7 @@ test.describe('AsciiDiff App Shell', () => {
   test('renders titlebar with app name', async ({ page }) => {
     await expect(page.locator('#titlebar')).toBeVisible();
     await expect(page.locator('.app-name')).toHaveText('AsciiDiff');
+    await expect(page.locator('.file-name')).toBeVisible();
   });
 
   test('renders toolbar with all controls', async ({ page }) => {
@@ -40,12 +41,6 @@ test.describe('AsciiDiff App Shell', () => {
     await expect(page.locator('#statusbar')).toBeVisible();
     await expect(page.locator('#statusbar')).toContainText('additions');
     await expect(page.locator('#statusbar')).toContainText('deletions');
-  });
-
-  test('renders traffic light dots', async ({ page }) => {
-    await expect(page.locator('.dot-r')).toBeVisible();
-    await expect(page.locator('.dot-y')).toBeVisible();
-    await expect(page.locator('.dot-g')).toBeVisible();
   });
 
   test('renders diff stats badges', async ({ page }) => {
