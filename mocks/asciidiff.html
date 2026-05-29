@@ -1,0 +1,1155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AsciiDiff</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+:root {
+  --font: 'IBM Plex Sans', sans-serif;
+  --mono: 'IBM Plex Mono', 'JetBrains Mono', monospace;
+  --bg: #0f1117;
+  --bg2: #161b22;
+  --bg3: #1c2230;
+  --bg4: #21283a;
+  --bg5: #2a3347;
+  --border: rgba(255,255,255,0.08);
+  --border2: rgba(255,255,255,0.14);
+  --text: #e8eaf0;
+  --text2: #8b95a8;
+  --text3: #545e72;
+  --accent: #6366f1;
+  --accent-dim: rgba(99,102,241,0.15);
+  --accent-border: rgba(99,102,241,0.4);
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.12);
+  --green-border: rgba(34,197,94,0.3);
+  --red: #ef4444;
+  --red-dim: rgba(239,68,68,0.1);
+  --red-border: rgba(239,68,68,0.3);
+  --amber: #f59e0b;
+  --amber-dim: rgba(245,158,11,0.12);
+  --amber-border: rgba(245,158,11,0.3);
+  --teal: #14b8a6;
+  --teal-dim: rgba(20,184,166,0.12);
+  --radius: 6px;
+  --radius-lg: 10px;
+  --sidebar-w: 220px;
+  --toolbar-h: 44px;
+  --titlebar-h: 38px;
+  --statusbar-h: 26px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 13px; line-height: 1.5; }
+button { font-family: var(--font); cursor: pointer; }
+select { font-family: var(--font); }
+input { font-family: var(--font); }
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg5); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* ── APP SHELL ─────────────────────────────────────────────── */
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* ── TITLEBAR ───────────────────────────────────────────────── */
+#titlebar {
+  height: var(--titlebar-h); flex-shrink: 0;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px; padding: 0 14px;
+  -webkit-app-region: drag; user-select: none;
+}
+.traffic { display: flex; gap: 6px; -webkit-app-region: no-drag; }
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dot-r { background: #ff5f57; } .dot-y { background: #febc2e; } .dot-g { background: #28c840; }
+#titlebar .app-name { font-size: 12px; font-weight: 500; color: var(--text2); margin-left: 4px; letter-spacing: .02em; }
+#titlebar .file-name { font-size: 12px; color: var(--text3); }
+#titlebar .sep { color: var(--text3); font-size: 10px; }
+
+/* ── TOOLBAR ────────────────────────────────────────────────── */
+#toolbar {
+  height: var(--toolbar-h); flex-shrink: 0;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 4px; padding: 0 10px;
+}
+.tb-sep { width: 1px; height: 22px; background: var(--border); margin: 0 5px; flex-shrink: 0; }
+.tb-btn {
+  height: 28px; padding: 0 9px; border: 1px solid transparent;
+  border-radius: var(--radius); background: transparent; color: var(--text2);
+  font-size: 12px; display: flex; align-items: center; gap: 5px; white-space: nowrap;
+  transition: all .15s;
+}
+.tb-btn:hover { background: var(--bg4); border-color: var(--border); color: var(--text); }
+.tb-btn.active { background: var(--bg4); border-color: var(--border2); color: var(--text); }
+.tb-btn i { font-size: 14px; }
+.tb-spacer { flex: 1; }
+
+.branch-pill {
+  display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px;
+  border: 1px solid var(--border2); border-radius: 14px; background: var(--bg3);
+  font-size: 11px; font-weight: 500; color: var(--text); cursor: pointer;
+  transition: all .15s;
+}
+.branch-pill:hover { border-color: var(--border2); background: var(--bg4); }
+.branch-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.bd-l { background: var(--accent); } .bd-r { background: var(--teal); }
+.branch-pill i { font-size: 13px; color: var(--text3); }
+.swap-btn {
+  width: 28px; height: 28px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: transparent; color: var(--text3); display: flex; align-items: center; justify-content: center;
+  transition: all .15s; font-size: 16px;
+}
+.swap-btn:hover { background: var(--bg4); color: var(--text); }
+
+.diff-stats { display: flex; align-items: center; gap: 6px; }
+.stat-badge { font-size: 10px; font-weight: 500; padding: 2px 7px; border-radius: 10px; }
+.stat-add { background: var(--green-dim); color: var(--green); border: 1px solid var(--green-border); }
+.stat-del { background: var(--red-dim); color: var(--red); border: 1px solid var(--red-border); }
+.stat-mod { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber-border); }
+
+/* ── MAIN ───────────────────────────────────────────────────── */
+#main { display: flex; flex: 1; overflow: hidden; }
+
+/* ── SIDEBAR ────────────────────────────────────────────────── */
+#sidebar {
+  width: var(--sidebar-w); flex-shrink: 0;
+  background: var(--bg2); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; overflow: hidden; transition: width .2s;
+}
+#sidebar.collapsed { width: 0; }
+.sidebar-head {
+  height: 34px; display: flex; align-items: center; padding: 0 12px; gap: 6px;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.sidebar-head span { font-size: 10px; font-weight: 600; color: var(--text3); letter-spacing: .08em; text-transform: uppercase; }
+.tree { overflow-y: auto; flex: 1; padding: 4px 0; }
+.tree-section { padding: 8px 12px 3px; font-size: 9px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); }
+.tree-item {
+  display: flex; align-items: center; gap: 7px; padding: 5px 12px; cursor: pointer;
+  font-size: 12px; color: var(--text2); border-left: 2px solid transparent;
+  transition: all .1s;
+}
+.tree-item:hover { background: var(--bg3); color: var(--text); }
+.tree-item.active { background: var(--bg3); color: var(--text); border-left-color: var(--accent); }
+.tree-item i { font-size: 13px; flex-shrink: 0; }
+.tree-item .fname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 11px; }
+.tree-badge { font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 8px; flex-shrink: 0; }
+.tb-mod { background: var(--amber-dim); color: var(--amber); }
+.tb-add { background: var(--green-dim); color: var(--green); }
+.tb-del { background: var(--red-dim); color: var(--red); }
+
+/* ── CONTENT ────────────────────────────────────────────────── */
+#content { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+#panel-header {
+  height: 34px; display: flex; flex-shrink: 0;
+  background: var(--bg2); border-bottom: 1px solid var(--border);
+}
+.ph-side {
+  flex: 1; display: flex; align-items: center; padding: 0 14px; gap: 8px;
+  font-size: 11px;
+}
+.ph-side:first-child { border-right: 1px solid var(--border); }
+.commit-tag {
+  padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 500;
+  font-family: var(--mono);
+}
+.ct-l { background: var(--accent-dim); color: #a5b4fc; border: 1px solid var(--accent-border); }
+.ct-r { background: var(--teal-dim); color: #5eead4; border: 1px solid rgba(20,184,166,.3); }
+.ph-meta { color: var(--text3); font-size: 11px; }
+.ph-nav { display: flex; gap: 2px; margin-left: auto; }
+.nav-arrow {
+  width: 22px; height: 22px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: transparent; color: var(--text3); display: flex; align-items: center; justify-content: center;
+  font-size: 12px; cursor: pointer; transition: all .1s;
+}
+.nav-arrow:hover { background: var(--bg4); color: var(--text); }
+
+#panels { display: flex; flex: 1; overflow: hidden; }
+.panel {
+  flex: 1; overflow-y: auto; overflow-x: hidden;
+  background: var(--bg); min-width: 0;
+}
+.panel:first-child { border-right: 1px solid var(--border); }
+
+/* ── RENDERED ASCIIDOC ─────────────────────────────────────── */
+.rendered { padding: 24px 28px; max-width: 100%; }
+.adoc-title { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 4px; letter-spacing: -.01em; }
+.adoc-author { font-size: 12px; color: var(--text3); margin-bottom: 20px; display: flex; gap: 12px; }
+.adoc-h1 { font-size: 18px; font-weight: 600; color: var(--text); margin: 24px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.adoc-h2 { font-size: 15px; font-weight: 600; color: var(--text); margin: 18px 0 8px; }
+.adoc-h3 { font-size: 13px; font-weight: 500; color: var(--text2); margin: 14px 0 6px; }
+.adoc-p { color: var(--text2); margin-bottom: 10px; line-height: 1.75; }
+.adoc-p code, .adoc-code-inline { font-family: var(--mono); font-size: 11px; background: var(--bg3); border: 1px solid var(--border); padding: 1px 5px; border-radius: 3px; color: #a5b4fc; }
+.adoc-ul { padding-left: 18px; margin-bottom: 10px; }
+.adoc-ul li { color: var(--text2); margin-bottom: 4px; line-height: 1.65; }
+.adoc-ol { padding-left: 18px; margin-bottom: 10px; }
+.adoc-ol li { color: var(--text2); margin-bottom: 4px; }
+
+.adoc-note, .adoc-warn, .adoc-tip, .adoc-important {
+  padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0;
+  margin: 12px 0; font-size: 12px; line-height: 1.6;
+}
+.adoc-note { background: rgba(99,102,241,.1); border-left: 3px solid var(--accent); color: #c7d2fe; }
+.adoc-note strong { color: #a5b4fc; }
+.adoc-warn { background: var(--amber-dim); border-left: 3px solid var(--amber); color: #fde68a; }
+.adoc-warn strong { color: var(--amber); }
+.adoc-tip { background: var(--green-dim); border-left: 3px solid var(--green); color: #bbf7d0; }
+.adoc-tip strong { color: var(--green); }
+.adoc-important { background: var(--red-dim); border-left: 3px solid var(--red); color: #fecaca; }
+.adoc-important strong { color: var(--red); }
+
+.adoc-listing {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); margin: 12px 0; overflow: hidden;
+}
+.adoc-listing-title {
+  padding: 6px 14px; font-size: 10px; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--text3); background: var(--bg3);
+  border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px;
+}
+.adoc-listing-title .lang-badge {
+  padding: 1px 6px; background: var(--accent-dim); color: #a5b4fc;
+  border-radius: 4px; font-size: 10px; text-transform: none; letter-spacing: 0;
+}
+pre.adoc-pre {
+  padding: 14px 16px; font-family: var(--mono); font-size: 11px;
+  color: var(--text2); overflow-x: auto; line-height: 1.7; background: transparent;
+}
+.kw { color: #c084fc; } .str { color: #86efac; } .cmt { color: var(--text3); font-style: italic; }
+.fn { color: #93c5fd; } .num { color: #fca5a5; } .attr { color: #fde68a; }
+
+.adoc-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
+.adoc-table thead tr { background: var(--bg3); }
+.adoc-table th { padding: 8px 12px; text-align: left; font-weight: 600; color: var(--text); border: 1px solid var(--border); font-size: 11px; letter-spacing: .02em; }
+.adoc-table td { padding: 7px 12px; border: 1px solid var(--border); color: var(--text2); }
+.adoc-table tbody tr:hover { background: var(--bg2); }
+.adoc-table .badge { padding: 2px 7px; border-radius: 8px; font-size: 10px; font-weight: 500; }
+.badge-ok { background: var(--green-dim); color: var(--green); }
+.badge-warn { background: var(--amber-dim); color: var(--amber); }
+.badge-err { background: var(--red-dim); color: var(--red); }
+
+.adoc-include {
+  display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+  font-family: var(--mono); font-size: 11px; color: var(--text3); margin: 8px 0;
+}
+.adoc-include i { font-size: 13px; color: var(--accent); }
+.adoc-include .inc-path { color: #a5b4fc; }
+
+/* ── DIFF HIGHLIGHTING ─────────────────────────────────────── */
+.diff-wrap-add { background: var(--green-dim); border-left: 2px solid var(--green); padding-left: 8px; margin-left: -10px; border-radius: 0 3px 3px 0; }
+.diff-wrap-del { background: var(--red-dim); border-left: 2px solid var(--red); padding-left: 8px; margin-left: -10px; border-radius: 0 3px 3px 0; opacity: .75; }
+.diff-wrap-mod { background: var(--amber-dim); border-left: 2px solid var(--amber); padding-left: 8px; margin-left: -10px; border-radius: 0 3px 3px 0; }
+.inline-del { background: rgba(239,68,68,0.25); color: #fca5a5; border-radius: 2px; padding: 0 2px; text-decoration: line-through; }
+.inline-add { background: rgba(34,197,94,0.2); color: #86efac; border-radius: 2px; padding: 0 2px; }
+
+/* collapsed diff section */
+.diff-collapsed {
+  display: flex; align-items: center; gap: 8px; padding: 8px 10px; margin: 8px 0;
+  border: 1px dashed var(--border); border-radius: var(--radius); cursor: pointer;
+  font-size: 11px; color: var(--text3); transition: all .15s;
+}
+.diff-collapsed:hover { background: var(--bg2); color: var(--text2); }
+
+/* ── STATUSBAR ──────────────────────────────────────────────── */
+#statusbar {
+  height: var(--statusbar-h); flex-shrink: 0;
+  background: var(--bg2); border-top: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 12px; gap: 16px;
+  font-size: 11px; color: var(--text3);
+}
+.sb-item { display: flex; align-items: center; gap: 4px; }
+.sb-dot { width: 6px; height: 6px; border-radius: 50%; }
+.sb-spacer { flex: 1; }
+.sb-ok { display: flex; align-items: center; gap: 4px; color: var(--green); }
+
+/* ── MODAL ──────────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  width: 540px; background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg); overflow: hidden;
+  transform: scale(.96) translateY(8px); transition: transform .2s;
+}
+.modal-overlay.open .modal { transform: scale(1) translateY(0); }
+.modal-head {
+  padding: 16px 18px 12px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-head h2 { font-size: 14px; font-weight: 600; }
+.modal-close {
+  width: 26px; height: 26px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: transparent; color: var(--text3); display: flex; align-items: center; justify-content: center;
+  transition: all .1s;
+}
+.modal-close:hover { background: var(--bg4); color: var(--text); }
+.modal-body { padding: 16px 18px; }
+.modal-footer { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.modal-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.col-label { font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--text3); margin-bottom: 7px; display: flex; align-items: center; gap: 5px; }
+.search-wrap { position: relative; margin-bottom: 7px; }
+.search-wrap i { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text3); pointer-events: none; }
+.search-wrap input {
+  width: 100%; height: 30px; padding: 0 8px 0 28px;
+  background: var(--bg3); border: 1px solid var(--border2);
+  border-radius: var(--radius); color: var(--text); font-size: 12px; outline: none;
+}
+.search-wrap input:focus { border-color: var(--accent); }
+.branch-list { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; max-height: 190px; overflow-y: auto; }
+.bl-section { padding: 4px 10px; font-size: 9px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); background: var(--bg3); border-bottom: 1px solid var(--border); }
+.bl-item { display: flex; align-items: center; gap: 7px; padding: 7px 10px; cursor: pointer; border-bottom: 1px solid var(--border); font-size: 12px; transition: background .1s; }
+.bl-item:last-child { border-bottom: none; }
+.bl-item:hover { background: var(--bg3); }
+.bl-item.sel-l { background: var(--accent-dim); }
+.bl-item.sel-r { background: var(--teal-dim); }
+.bl-name { flex: 1; font-family: var(--mono); font-size: 11px; color: var(--text); }
+.bl-hash { font-family: var(--mono); font-size: 10px; color: var(--text3); background: var(--bg4); padding: 1px 5px; border-radius: 3px; }
+.check-icon { width: 14px; height: 14px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
+.ci-l { background: var(--accent-dim); color: #a5b4fc; }
+.ci-r { background: var(--teal-dim); color: #5eead4; }
+.ci-empty { background: transparent; }
+.commit-summary { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; font-size: 11px; }
+.commit-summary-title { font-weight: 600; margin-bottom: 6px; color: var(--text2); font-size: 11px; }
+.cs-chips { display: flex; align-items: center; gap: 7px; color: var(--text3); }
+.cs-chip { font-family: var(--mono); font-size: 10px; padding: 2px 7px; border-radius: 8px; }
+.cs-l { background: var(--accent-dim); color: #a5b4fc; border: 1px solid var(--accent-border); }
+.cs-r { background: var(--teal-dim); color: #5eead4; border: 1px solid rgba(20,184,166,.3); }
+.btn-primary { height: 32px; padding: 0 18px; border: none; border-radius: var(--radius); background: var(--accent); color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+.btn-primary:hover { opacity: .9; }
+.btn-ghost { height: 32px; padding: 0 14px; border: 1px solid var(--border2); border-radius: var(--radius); background: transparent; color: var(--text2); font-size: 12px; cursor: pointer; transition: all .15s; }
+.btn-ghost:hover { background: var(--bg4); color: var(--text); }
+.files-note { font-size: 11px; color: var(--text3); display: flex; align-items: center; gap: 5px; }
+
+/* ── SETTINGS ────────────────────────────────────────────────── */
+#settings-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; z-index: 1000;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+#settings-overlay.open { opacity: 1; pointer-events: all; }
+.settings-modal {
+  width: 620px; height: 480px; background: var(--bg2); border: 1px solid var(--border2);
+  border-radius: var(--radius-lg); overflow: hidden; display: flex;
+  transform: scale(.96) translateY(8px); transition: transform .2s;
+}
+#settings-overlay.open .settings-modal { transform: scale(1) translateY(0); }
+.settings-nav { width: 168px; background: var(--bg3); border-right: 1px solid var(--border); padding: 10px 0; flex-shrink: 0; }
+.settings-nav-title { font-size: 9px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); padding: 4px 12px 8px; }
+.sn-item { display: flex; align-items: center; gap: 7px; padding: 7px 12px; cursor: pointer; font-size: 12px; color: var(--text2); border-left: 2px solid transparent; transition: all .1s; }
+.sn-item:hover { background: var(--bg4); color: var(--text); }
+.sn-item.active { color: var(--text); border-left-color: var(--accent); background: var(--bg4); }
+.sn-item i { font-size: 14px; }
+.settings-content { flex: 1; overflow-y: auto; padding: 20px 22px; }
+.s-section { margin-bottom: 22px; }
+.s-section-title { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.s-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.s-label p { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+.s-label span { font-size: 11px; color: var(--text3); line-height: 1.4; }
+.s-select { height: 28px; padding: 0 8px; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius); color: var(--text); font-size: 12px; min-width: 160px; outline: none; cursor: pointer; }
+.s-select:focus { border-color: var(--accent); }
+.toggle { width: 34px; height: 18px; border-radius: 9px; background: var(--bg4); border: 1px solid var(--border2); position: relative; cursor: pointer; flex-shrink: 0; margin-top: 2px; transition: background .2s; }
+.toggle.on { background: var(--accent); border-color: var(--accent); }
+.toggle-knob { width: 12px; height: 12px; border-radius: 50%; background: var(--text3); position: absolute; top: 2px; left: 2px; transition: left .2s, background .2s; }
+.toggle.on .toggle-knob { left: 18px; background: #fff; }
+.kbd { display: inline-block; font-family: var(--mono); font-size: 10px; background: var(--bg3); border: 1px solid var(--border2); border-radius: 3px; padding: 1px 5px; color: var(--text2); }
+.shortcuts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.shortcut-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.shortcut-row:last-child { border-bottom: none; }
+.shortcut-row span { color: var(--text2); }
+
+/* tooltip */
+.tooltip-container { position: relative; }
+.tooltip {
+  position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: var(--bg4); border: 1px solid var(--border2); border-radius: var(--radius);
+  padding: 5px 9px; font-size: 11px; color: var(--text); white-space: nowrap;
+  pointer-events: none; opacity: 0; transition: opacity .15s; z-index: 100;
+}
+.tooltip-container:hover .tooltip { opacity: 1; }
+
+/* view mode buttons */
+#view-mode .tb-btn { padding: 0 8px; }
+
+/* jump indicators */
+.jump-indicator {
+  position: absolute; right: 8px; width: 3px; background: var(--amber);
+  border-radius: 2px; pointer-events: none;
+}
+
+/* ── RESPONSIVE SCROLLBAR SYNC ──── */
+.panel-scroller { position: relative; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- TITLEBAR -->
+  <div id="titlebar">
+    <div class="traffic">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+    </div>
+    <span class="app-name">AsciiDiff</span>
+    <span class="sep">›</span>
+    <span class="file-name" id="active-filename">architecture-guide.adoc</span>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div id="toolbar">
+    <div class="tb-group" style="display:flex;gap:3px;align-items:center">
+      <button class="tb-btn tooltip-container" id="btn-open">
+        <i class="ti ti-folder-open"></i><span>Open repo</span>
+        <div class="tooltip">Open a git repository folder</div>
+      </button>
+    </div>
+    <div class="tb-sep"></div>
+    <!-- Branch pickers -->
+    <div class="branch-pill" id="pill-left" onclick="openBranchModal()">
+      <div class="branch-dot bd-l"></div>
+      <i class="ti ti-git-branch"></i>
+      <span id="label-left">main</span>
+      <i class="ti ti-chevron-down"></i>
+    </div>
+    <button class="swap-btn tooltip-container" onclick="swapBranches()" title="Swap">
+      ⇄
+      <div class="tooltip">Swap branches</div>
+    </button>
+    <div class="branch-pill" id="pill-right" onclick="openBranchModal()">
+      <div class="branch-dot bd-r"></div>
+      <i class="ti ti-git-branch"></i>
+      <span id="label-right">feature/v2</span>
+      <i class="ti ti-chevron-down"></i>
+    </div>
+    <div class="tb-sep"></div>
+    <!-- View modes -->
+    <div id="view-mode" style="display:flex;gap:2px">
+      <button class="tb-btn active tooltip-container" data-mode="split" onclick="setView('split',this)">
+        <i class="ti ti-layout-columns"></i> Split
+        <div class="tooltip">Side-by-side view</div>
+      </button>
+      <button class="tb-btn tooltip-container" data-mode="unified" onclick="setView('unified',this)">
+        <i class="ti ti-file-diff"></i> Unified
+        <div class="tooltip">Unified diff view</div>
+      </button>
+      <button class="tb-btn tooltip-container" data-mode="preview" onclick="setView('preview',this)">
+        <i class="ti ti-eye"></i> Preview
+        <div class="tooltip">Right panel only</div>
+      </button>
+    </div>
+    <div class="tb-sep"></div>
+    <button class="tb-btn active tooltip-container" id="btn-highlight" onclick="toggleHighlight(this)">
+      <i class="ti ti-highlight"></i> Highlight
+      <div class="tooltip">Toggle diff highlighting</div>
+    </button>
+    <button class="tb-btn tooltip-container" id="btn-collapse" onclick="toggleCollapse(this)">
+      <i class="ti ti-fold"></i> Collapse unchanged
+      <div class="tooltip">Hide unmodified sections</div>
+    </button>
+    <button class="tb-btn active tooltip-container" id="btn-sync" onclick="toggleSync(this)">
+      <i class="ti ti-arrows-right-left"></i> Sync scroll
+      <div class="tooltip">Synchronize panel scrolling</div>
+    </button>
+    <div class="tb-spacer"></div>
+    <div class="diff-stats">
+      <span class="stat-badge stat-add" id="stat-add">+12 added</span>
+      <span class="stat-badge stat-del" id="stat-del">−5 removed</span>
+      <span class="stat-badge stat-mod" id="stat-mod">~8 modified</span>
+    </div>
+    <div class="tb-sep"></div>
+    <button class="tb-btn tooltip-container" onclick="openSettings()">
+      <i class="ti ti-settings"></i>
+      <div class="tooltip">Preferences</div>
+    </button>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <!-- SIDEBAR -->
+    <div id="sidebar">
+      <div class="sidebar-head">
+        <i class="ti ti-files" style="font-size:13px;color:var(--text3)"></i>
+        <span>Changed files</span>
+      </div>
+      <div class="tree" id="file-tree"></div>
+    </div>
+
+    <!-- CONTENT -->
+    <div id="content">
+      <div id="panel-header">
+        <div class="ph-side">
+          <i class="ti ti-git-commit" style="font-size:12px;color:var(--text3)"></i>
+          <span class="commit-tag ct-l" id="commit-left">main · a3f91c2</span>
+          <span class="ph-meta" id="date-left">2 days ago</span>
+          <div class="ph-nav" style="margin-left:auto;display:flex;gap:2px">
+            <button class="nav-arrow tooltip-container" onclick="jumpDiff(-1)">
+              <i class="ti ti-chevron-up"></i>
+              <div class="tooltip">Previous change</div>
+            </button>
+            <button class="nav-arrow tooltip-container" onclick="jumpDiff(1)">
+              <i class="ti ti-chevron-down"></i>
+              <div class="tooltip">Next change</div>
+            </button>
+          </div>
+        </div>
+        <div class="ph-side">
+          <i class="ti ti-git-commit" style="font-size:12px;color:var(--text3)"></i>
+          <span class="commit-tag ct-r" id="commit-right">feature/v2 · d8b40ef</span>
+          <span class="ph-meta" id="date-right">just now</span>
+        </div>
+      </div>
+      <div id="panels">
+        <div class="panel" id="panel-left"></div>
+        <div class="panel" id="panel-right"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUSBAR -->
+  <div id="statusbar">
+    <div class="sb-item"><div class="sb-dot" style="background:var(--green)"></div> 12 additions</div>
+    <div class="sb-item"><div class="sb-dot" style="background:var(--red)"></div> 5 deletions</div>
+    <div class="sb-item"><div class="sb-dot" style="background:var(--amber)"></div> 8 modifications</div>
+    <div class="sb-spacer"></div>
+    <div class="sb-ok"><i class="ti ti-check" style="font-size:11px"></i> All includes resolved</div>
+    <div class="sb-item"><i class="ti ti-file-text" style="font-size:11px"></i> <span id="sb-file">architecture-guide.adoc</span></div>
+    <div class="sb-item"><i class="ti ti-git-branch" style="font-size:11px"></i> <span id="sb-branches">main ⇄ feature/v2</span></div>
+    <div class="sb-item"><i class="ti ti-clock" style="font-size:11px"></i> Rendered in 42ms</div>
+  </div>
+</div>
+
+<!-- BRANCH MODAL -->
+<div class="modal-overlay" id="branch-modal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2><i class="ti ti-git-compare" style="font-size:14px;margin-right:6px;vertical-align:-2px"></i>Select branches to compare</h2>
+      <button class="modal-close" onclick="closeBranchModal()"><i class="ti ti-x" style="font-size:12px"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-cols">
+        <div>
+          <div class="col-label"><div class="branch-dot bd-l"></div> Base (left panel)</div>
+          <div class="search-wrap"><i class="ti ti-search"></i><input type="text" placeholder="Filter branches…" id="search-left" oninput="filterBranches('left',this.value)"></div>
+          <div class="branch-list" id="list-left"></div>
+        </div>
+        <div>
+          <div class="col-label"><div class="branch-dot bd-r"></div> Compare (right panel)</div>
+          <div class="search-wrap"><i class="ti ti-search"></i><input type="text" placeholder="Filter branches…" id="search-right" oninput="filterBranches('right',this.value)"></div>
+          <div class="branch-list" id="list-right"></div>
+        </div>
+      </div>
+      <div class="commit-summary">
+        <div class="commit-summary-title">Commit range</div>
+        <div class="cs-chips">
+          <span class="cs-chip cs-l" id="cs-left">a3f91c2</span>
+          <i class="ti ti-arrow-right" style="font-size:12px"></i>
+          <span class="cs-chip cs-r" id="cs-right">d8b40ef</span>
+          <span id="cs-meta" style="color:var(--text3)">· 7 commits ahead · 6 files changed</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div class="files-note"><i class="ti ti-files" style="font-size:12px"></i> <span id="modal-files-note">6 .adoc files will be compared</span></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-ghost" onclick="closeBranchModal()">Cancel</button>
+        <button class="btn-primary" onclick="applyBranchSelection()">Compare branches</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS -->
+<div id="settings-overlay">
+  <div class="settings-modal">
+    <div class="settings-nav">
+      <div class="settings-nav-title">Preferences</div>
+      <div class="sn-item active" onclick="setSettingsTab('rendering',this)"><i class="ti ti-eye"></i> Rendering</div>
+      <div class="sn-item" onclick="setSettingsTab('includes',this)"><i class="ti ti-file-symlink"></i> Includes</div>
+      <div class="sn-item" onclick="setSettingsTab('git',this)"><i class="ti ti-git-branch"></i> Git</div>
+      <div class="sn-item" onclick="setSettingsTab('syntax',this)"><i class="ti ti-code"></i> Syntax highlight</div>
+      <div class="sn-item" onclick="setSettingsTab('diff',this)"><i class="ti ti-layout-columns"></i> Diff display</div>
+      <div class="sn-item" onclick="setSettingsTab('keys',this)"><i class="ti ti-keyboard"></i> Keybindings</div>
+      <div class="sn-item" onclick="setSettingsTab('appearance',this)"><i class="ti ti-palette"></i> Appearance</div>
+    </div>
+    <div class="settings-content" id="settings-body"></div>
+  </div>
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+const BRANCHES = [
+  { name:'main',              hash:'a3f91c2', date:'2 days ago',  type:'branch' },
+  { name:'develop',           hash:'bc44f01', date:'3 hours ago', type:'branch' },
+  { name:'release/1.5',       hash:'77ea321', date:'1 week ago',  type:'branch' },
+  { name:'feature/v2',        hash:'d8b40ef', date:'just now',    type:'branch' },
+  { name:'feature/auth',      hash:'1de5802', date:'5 days ago',  type:'branch' },
+  { name:'fix/table-render',  hash:'c99ab12', date:'1 day ago',   type:'branch' },
+  { name:'v1.4.0',            hash:'9f2c11d', date:'2 weeks ago', type:'tag'    },
+  { name:'v1.3.2',            hash:'4ab88cc', date:'1 month ago', type:'tag'    },
+];
+
+const FILES = [
+  { name:'architecture-guide.adoc', type:'mod',  badge:'~8', icon:'ti-file-text',   stats:{add:12,del:5,mod:8},  commits:['a3f91c2','d8b40ef'], dates:['2 days ago','just now'] },
+  { name:'api-reference.adoc',      type:'mod',  badge:'~3', icon:'ti-file-text',   stats:{add:4,del:1,mod:3},   commits:['a3f91c2','d8b40ef'], dates:['2 days ago','just now'] },
+  { name:'deployment-guide.adoc',   type:'add',  badge:'new',icon:'ti-file-text',   stats:{add:48,del:0,mod:0},  commits:['—','d8b40ef'],       dates:['—','just now'] },
+  { name:'images/arch-v2.png',      type:'add',  badge:'new',icon:'ti-photo',       stats:{add:1,del:0,mod:0},   commits:['—','d8b40ef'],       dates:['—','just now'] },
+  { name:'legacy-setup.adoc',       type:'del',  badge:'del',icon:'ti-file-text',   stats:{add:0,del:22,mod:0},  commits:['a3f91c2','—'],        dates:['2 days ago','—'] },
+  { name:'partials/_header.adoc',   type:'mod',  badge:'~1', icon:'ti-file-symlink',stats:{add:1,del:0,mod:1},   commits:['a3f91c2','d8b40ef'], dates:['2 days ago','just now'] },
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let state = {
+  leftBranch: 'main',
+  rightBranch: 'feature/v2',
+  leftSel: 'main',
+  rightSel: 'feature/v2',
+  activeFile: 0,
+  viewMode: 'split',
+  highlight: true,
+  collapse: false,
+  syncScroll: true,
+  syncing: false,
+  currentDiffIdx: -1,
+};
+
+// ── FILE TREE ─────────────────────────────────────────────────────────────────
+function renderFileTree() {
+  const tree = document.getElementById('file-tree');
+  const groups = { mod:'Modified', add:'Added', del:'Deleted' };
+  let html = '';
+  for (const [type, label] of Object.entries(groups)) {
+    const items = FILES.filter(f => f.type === type);
+    if (!items.length) continue;
+    html += `<div class="tree-section">${label}</div>`;
+    items.forEach((f, i) => {
+      const idx = FILES.indexOf(f);
+      const colorMap = { mod:'var(--text2)', add:'var(--green)', del:'var(--red)' };
+      const ic = `<i class="ti ${f.icon}" style="color:${colorMap[f.type]};font-size:13px"></i>`;
+      const cls = idx === state.activeFile ? ' active' : '';
+      const strike = f.type === 'del' ? 'text-decoration:line-through;opacity:.6;' : '';
+      html += `<div class="tree-item${cls}" onclick="selectFile(${idx})">
+        ${ic}
+        <span class="fname" style="${strike}">${f.name}</span>
+        <span class="tree-badge tb-${f.type}">${f.badge}</span>
+      </div>`;
+    });
+  }
+  tree.innerHTML = html;
+}
+
+function selectFile(idx) {
+  state.activeFile = idx;
+  const f = FILES[idx];
+  document.getElementById('active-filename').textContent = f.name;
+  document.getElementById('sb-file').textContent = f.name;
+  // update stats
+  document.getElementById('stat-add').textContent = `+${f.stats.add} added`;
+  document.getElementById('stat-del').textContent = `−${f.stats.del} removed`;
+  document.getElementById('stat-mod').textContent = `~${f.stats.mod} modified`;
+  renderFileTree();
+  renderPanels();
+}
+
+// ── PANEL CONTENT ─────────────────────────────────────────────────────────────
+const CONTENT = {
+  0: { // architecture-guide.adoc
+    left: `
+<div class="rendered">
+  <div class="adoc-title">System Architecture Guide</div>
+  <div class="adoc-author"><span>Engineering Team</span><span style="color:var(--text3)">·</span><span>Version 1.4</span><span style="color:var(--text3)">·</span><span>Last updated: Oct 2024</span></div>
+  <div class="adoc-include"><i class="ti ti-file-symlink"></i> <span style="color:var(--text3)">include::</span><span class="inc-path">partials/_header.adoc</span></div>
+  <div class="adoc-h1">Overview</div>
+  <p class="adoc-p">This document describes the core architectural components of the platform and how they interact with external services deployed on the cloud infrastructure.</p>
+  <div class="adoc-note"><strong>Note:</strong> Refer to the deployment guide for infrastructure-specific configuration steps before proceeding.</div>
+  <div class="adoc-h1">Components</div>
+  <div class="adoc-h2">API Gateway</div>
+  <p class="adoc-p">The API Gateway handles all inbound traffic and routes requests to downstream services based on path matching rules defined in <code class="adoc-code-inline">gateway.yaml</code>.</p>
+  <div class="adoc-h2">Legacy Proxy</div>
+  <p class="adoc-p">A thin reverse proxy used for backward compatibility with v1 clients. Routes <code class="adoc-code-inline">/api/v1/*</code> traffic to the deprecated service handlers.</p>
+  <div class="adoc-h1">Configuration</div>
+  <div class="adoc-include"><i class="ti ti-file-symlink"></i><span style="color:var(--text3)">include::</span><span class="inc-path">partials/_config.adoc</span></div>
+  <div class="adoc-listing">
+    <div class="adoc-listing-title"><i class="ti ti-code" style="font-size:12px"></i> gateway configuration <span class="lang-badge">yaml</span></div>
+    <pre class="adoc-pre"><span class="attr">gateway</span>:
+  <span class="attr">port</span>: <span class="num">8080</span>
+  <span class="attr">timeout</span>: <span class="str">30s</span>
+  <span class="attr">retry_policy</span>: <span class="str">exponential</span></pre>
+  </div>
+  <div class="adoc-h1">Service Matrix</div>
+  <table class="adoc-table">
+    <thead><tr><th>Service</th><th>Port</th><th>Protocol</th><th>Owner</th></tr></thead>
+    <tbody>
+      <tr><td>API Gateway</td><td>8080</td><td>HTTP/2</td><td>Platform</td></tr>
+      <tr><td>Auth Service</td><td>9001</td><td>gRPC</td><td>Identity</td></tr>
+      <tr><td>Cache Layer</td><td>6379</td><td>Redis</td><td>Infra</td></tr>
+      <tr><td>Legacy Proxy</td><td>8000</td><td>HTTP/1.1</td><td>Platform</td></tr>
+    </tbody>
+  </table>
+  <div class="adoc-h1">Deployment Notes</div>
+  <p class="adoc-p">Deployments are managed through the CI pipeline. Each service is containerized and orchestrated via the internal Kubernetes cluster running on AWS EKS.</p>
+  <ul class="adoc-ul">
+    <li>Staging deploys on every merge to <code class="adoc-code-inline">develop</code></li>
+    <li>Production releases require manual approval from a lead engineer</li>
+    <li>Rollbacks are automated when error rate exceeds 5% over 5 minutes</li>
+  </ul>
+</div>`,
+
+    right: `
+<div class="rendered">
+  <div class="adoc-title">System Architecture Guide</div>
+  <div class="adoc-author"><span>Engineering Team</span><span style="color:var(--text3)">·</span><span class="diff-wrap-mod" style="display:inline-block;padding:0 4px">Version <span class="inline-del">1.4</span><span class="inline-add">2.0</span></span><span style="color:var(--text3)">·</span><span>Last updated: <span class="inline-del">Oct 2024</span><span class="inline-add">Jan 2025</span></span></div>
+  <div class="adoc-include"><i class="ti ti-file-symlink"></i><span style="color:var(--text3)">include::</span><span class="inc-path">partials/_header.adoc</span></div>
+  <div class="adoc-h1">Overview</div>
+  <p class="adoc-p diff-wrap-mod">This document describes the core architectural components of the platform and how they interact with external services <span class="inline-del">deployed on the cloud infrastructure</span><span class="inline-add">via a fully managed service mesh on AWS EKS</span>.</p>
+  <div class="adoc-note"><strong>Note:</strong> Refer to the deployment guide for infrastructure-specific configuration steps before proceeding.</div>
+  <div class="adoc-h1">Components</div>
+  <div class="adoc-h2">API Gateway</div>
+  <p class="adoc-p diff-wrap-mod">The API Gateway handles all inbound <span class="inline-add">and outbound</span> traffic<span class="inline-del"> and routes requests to downstream services based on path matching rules defined in <code class="adoc-code-inline">gateway.yaml</code></span><span class="inline-add">, applying rate limiting, authentication middleware, and dynamic routing rules. Replaces static path config with policy-based routing.</span></p>
+  <div class="adoc-h2 diff-wrap-add">Service Mesh</div>
+  <p class="adoc-p diff-wrap-add">All inter-service communication is now routed through an Envoy-based service mesh with mTLS enforced on every connection. Observability is provided by Jaeger tracing and Prometheus metrics.</p>
+  <div class="adoc-warn diff-wrap-add"><strong>Breaking change:</strong> The Legacy Proxy component has been removed. All v1 clients must migrate to the v2 API before upgrading.</div>
+  <div class="adoc-h1">Configuration</div>
+  <div class="adoc-include"><i class="ti ti-file-symlink"></i><span style="color:var(--text3)">include::</span><span class="inc-path">partials/_config.adoc</span></div>
+  <div class="adoc-listing diff-wrap-mod">
+    <div class="adoc-listing-title"><i class="ti ti-code" style="font-size:12px"></i> gateway configuration <span class="lang-badge">yaml</span></div>
+    <pre class="adoc-pre"><span class="attr">gateway</span>:
+  <span class="attr">port</span>: <span class="num">8080</span>
+  <span class="attr">timeout</span>: <span class="inline-del">30s</span><span class="inline-add">60s</span>
+  <span class="attr">retry_policy</span>: <span class="str">exponential</span>
+  <span class="attr">mesh</span>: <span class="inline-add">enabled</span>
+  <span class="attr">mtls</span>: <span class="inline-add">strict</span></pre>
+  </div>
+  <div class="adoc-h1">Service Matrix</div>
+  <table class="adoc-table">
+    <thead><tr><th>Service</th><th>Port</th><th>Protocol</th><th>Owner</th><th class="diff-wrap-add">Health</th></tr></thead>
+    <tbody>
+      <tr><td>API Gateway</td><td>8080</td><td>HTTP/2</td><td>Platform</td><td class="diff-wrap-add"><span class="badge badge-ok">healthy</span></td></tr>
+      <tr><td>Auth Service</td><td>9001</td><td>gRPC</td><td>Identity</td><td class="diff-wrap-add"><span class="badge badge-ok">healthy</span></td></tr>
+      <tr><td>Cache Layer</td><td>6379</td><td>Redis</td><td>Infra</td><td class="diff-wrap-add"><span class="badge badge-warn">degraded</span></td></tr>
+      <tr class="diff-wrap-del"><td style="text-decoration:line-through;opacity:.6">Legacy Proxy</td><td style="text-decoration:line-through;opacity:.6">8000</td><td style="text-decoration:line-through;opacity:.6">HTTP/1.1</td><td style="text-decoration:line-through;opacity:.6">Platform</td><td><span class="badge badge-err">removed</span></td></tr>
+    </tbody>
+  </table>
+  <div class="adoc-h1">Deployment Notes</div>
+  <p class="adoc-p">Deployments are managed through the CI pipeline. Each service is containerized and orchestrated via the internal Kubernetes cluster running on AWS EKS.</p>
+  <ul class="adoc-ul">
+    <li>Staging deploys on every merge to <code class="adoc-code-inline">develop</code></li>
+    <li>Production releases require manual approval from a lead engineer</li>
+    <li>Rollbacks are automated when error rate exceeds <span class="inline-del">5%</span><span class="inline-add">2%</span> over 5 minutes</li>
+    <li class="diff-wrap-add">Service mesh health checks run every 10s with automatic circuit-breaking</li>
+  </ul>
+</div>`
+  },
+  1: { // api-reference.adoc
+    left: `<div class="rendered">
+  <div class="adoc-title">API Reference</div>
+  <div class="adoc-author"><span>Engineering Team</span><span style="color:var(--text3)">·</span><span>v1.4</span></div>
+  <div class="adoc-h1">Authentication</div>
+  <p class="adoc-p">All API requests must include a Bearer token in the <code class="adoc-code-inline">Authorization</code> header.</p>
+  <div class="adoc-listing">
+    <div class="adoc-listing-title"><i class="ti ti-code" style="font-size:12px"></i> request example <span class="lang-badge">bash</span></div>
+    <pre class="adoc-pre"><span class="kw">curl</span> -H <span class="str">"Authorization: Bearer &lt;token&gt;"</span> \\
+     https://api.example.com/v1/resources</pre>
+  </div>
+  <div class="adoc-h1">Endpoints</div>
+  <table class="adoc-table">
+    <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>GET</td><td>/v1/resources</td><td>List all resources</td></tr>
+      <tr><td>POST</td><td>/v1/resources</td><td>Create a resource</td></tr>
+      <tr><td>DELETE</td><td>/v1/resources/:id</td><td>Delete a resource</td></tr>
+    </tbody>
+  </table>
+  <div class="adoc-note"><strong>Note:</strong> Rate limiting is enforced at 100 requests/minute per token.</div>
+</div>`,
+    right: `<div class="rendered">
+  <div class="adoc-title">API Reference</div>
+  <div class="adoc-author"><span>Engineering Team</span><span style="color:var(--text3)">·</span><span class="diff-wrap-mod" style="display:inline-block;padding:0 3px">v<span class="inline-del">1.4</span><span class="inline-add">2.0</span></span></div>
+  <div class="adoc-h1">Authentication</div>
+  <p class="adoc-p">All API requests must include a Bearer token in the <code class="adoc-code-inline">Authorization</code> header.</p>
+  <div class="adoc-listing">
+    <div class="adoc-listing-title"><i class="ti ti-code" style="font-size:12px"></i> request example <span class="lang-badge">bash</span></div>
+    <pre class="adoc-pre"><span class="kw">curl</span> -H <span class="str">"Authorization: Bearer &lt;token&gt;"</span> \\
+     https://api.example.com/<span class="inline-del">v1</span><span class="inline-add">v2</span>/resources</pre>
+  </div>
+  <div class="adoc-h1">Endpoints</div>
+  <table class="adoc-table">
+    <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
+    <tbody>
+      <tr><td>GET</td><td>/v<span class="inline-del">1</span><span class="inline-add">2</span>/resources</td><td>List all resources</td></tr>
+      <tr><td>POST</td><td>/v<span class="inline-del">1</span><span class="inline-add">2</span>/resources</td><td>Create a resource</td></tr>
+      <tr><td>DELETE</td><td>/v<span class="inline-del">1</span><span class="inline-add">2</span>/resources/:id</td><td>Delete a resource</td></tr>
+      <tr class="diff-wrap-add"><td>PATCH</td><td>/v2/resources/:id</td><td>Partial update</td></tr>
+    </tbody>
+  </table>
+  <div class="adoc-note diff-wrap-mod"><strong>Note:</strong> Rate limiting is enforced at <span class="inline-del">100</span><span class="inline-add">500</span> requests/minute per token.</div>
+</div>`
+  },
+  2: { // deployment-guide (new file)
+    left: `<div class="rendered" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;color:var(--text3)">
+  <i class="ti ti-file-off" style="font-size:40px;margin-bottom:12px;opacity:.4"></i>
+  <p style="font-size:13px">File does not exist in <strong style="color:var(--text2)">main</strong></p>
+  <p style="font-size:11px;margin-top:4px;opacity:.6">This file was added in feature/v2</p>
+</div>`,
+    right: `<div class="rendered">
+  <div class="adoc-title diff-wrap-add">Deployment Guide</div>
+  <div class="adoc-author diff-wrap-add"><span>Infrastructure Team</span><span style="color:var(--text3)">·</span><span>v2.0</span></div>
+  <div class="adoc-h1 diff-wrap-add">Prerequisites</div>
+  <p class="adoc-p diff-wrap-add">Before deploying, ensure you have access to the AWS account and the required IAM roles are configured.</p>
+  <div class="adoc-tip diff-wrap-add"><strong>Tip:</strong> Run <code class="adoc-code-inline">make preflight</code> to validate all prerequisites automatically.</div>
+  <div class="adoc-h1 diff-wrap-add">Deploy to Staging</div>
+  <div class="adoc-listing diff-wrap-add">
+    <div class="adoc-listing-title"><span class="lang-badge">bash</span></div>
+    <pre class="adoc-pre"><span class="cmt"># Deploy to staging environment</span>
+<span class="kw">make</span> deploy ENV=staging TAG=<span class="str">$(git rev-parse --short HEAD)</span></pre>
+  </div>
+  <div class="adoc-h1 diff-wrap-add">Deploy to Production</div>
+  <div class="adoc-important diff-wrap-add"><strong>Important:</strong> Production deployments require a PR review and passing CI on <code class="adoc-code-inline">main</code>.</div>
+  <div class="adoc-listing diff-wrap-add">
+    <div class="adoc-listing-title"><span class="lang-badge">bash</span></div>
+    <pre class="adoc-pre"><span class="kw">make</span> deploy ENV=production TAG=<span class="str">v2.0.0</span> APPROVE=yes</pre>
+  </div>
+</div>`
+  },
+  3: { left: `<div class="rendered" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:200px;color:var(--text3)"><i class="ti ti-photo-off" style="font-size:40px;margin-bottom:12px;opacity:.4"></i><p>Binary file not in base branch</p></div>`,
+       right: `<div class="rendered" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:200px;color:var(--text3)"><i class="ti ti-photo" style="font-size:40px;margin-bottom:12px;color:var(--green);opacity:.7"></i><p style="color:var(--green)">Binary image added in feature/v2</p><p style="font-size:11px;margin-top:4px;opacity:.6">arch-v2.png · 84 KB</p></div>` },
+  4: { left: `<div class="rendered">
+  <div class="adoc-title diff-wrap-del" style="text-decoration:line-through;opacity:.6">Legacy Setup Guide</div>
+  <div class="adoc-author diff-wrap-del" style="opacity:.6"><span>Platform Team</span><span style="color:var(--text3)">·</span><span>v1.x</span></div>
+  <div class="adoc-h1 diff-wrap-del" style="opacity:.6">Installation</div>
+  <p class="adoc-p diff-wrap-del" style="text-decoration:line-through;opacity:.5">Install the legacy proxy component before configuring the gateway. This component provides backward compatibility for v1 API clients.</p>
+  <div class="adoc-warn diff-wrap-del" style="opacity:.7"><strong>Deprecated:</strong> This guide applies to v1.x only. See the main architecture guide for v2.</div>
+</div>`,
+       right: `<div class="rendered" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:300px;color:var(--text3)"><i class="ti ti-trash" style="font-size:40px;margin-bottom:12px;color:var(--red);opacity:.5"></i><p style="font-size:13px">File deleted in <strong style="color:var(--text2)">feature/v2</strong></p><p style="font-size:11px;margin-top:4px;opacity:.6">legacy-setup.adoc has been removed</p></div>` },
+  5: { left: `<div class="rendered">
+  <div class="adoc-h2" style="margin-top:0">_header.adoc (partial)</div>
+  <p class="adoc-p">:toc:<br>:toclevels: 3<br>:icons: font<br>:source-highlighter: rouge</p>
+</div>`,
+       right: `<div class="rendered">
+  <div class="adoc-h2" style="margin-top:0">_header.adoc (partial)</div>
+  <p class="adoc-p diff-wrap-mod">:toc:<br>:toclevels: <span class="inline-del">3</span><span class="inline-add">4</span><br>:icons: font<br>:source-highlighter: rouge</p>
+</div>` }
+};
+
+function renderPanels() {
+  const f = FILES[state.activeFile];
+  const content = CONTENT[state.activeFile] || { left:'', right:'' };
+  const panelLeft = document.getElementById('panel-left');
+  const panelRight = document.getElementById('panel-right');
+  panelLeft.innerHTML = content.left;
+  panelRight.innerHTML = content.right;
+  // Apply highlight/collapse state
+  applyHighlight();
+  applyViewMode();
+  // Update header
+  document.getElementById('commit-left').textContent = `${state.leftBranch} · ${BRANCHES.find(b=>b.name===state.leftBranch)?.hash||'—'}`;
+  document.getElementById('commit-right').textContent = `${state.rightBranch} · ${BRANCHES.find(b=>b.name===state.rightBranch)?.hash||'—'}`;
+  document.getElementById('date-left').textContent = f.dates[0];
+  document.getElementById('date-right').textContent = f.dates[1];
+  // Setup scroll sync
+  setupScrollSync();
+}
+
+// ── VIEW MODES ────────────────────────────────────────────────────────────────
+function setView(mode, btn) {
+  state.viewMode = mode;
+  document.querySelectorAll('#view-mode .tb-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyViewMode();
+}
+
+function applyViewMode() {
+  const left = document.getElementById('panel-left');
+  const right = document.getElementById('panel-right');
+  if (state.viewMode === 'split') {
+    left.style.display = ''; right.style.display = '';
+  } else if (state.viewMode === 'preview') {
+    left.style.display = 'none'; right.style.display = '';
+  } else if (state.viewMode === 'unified') {
+    left.style.display = 'none'; right.style.display = '';
+    // In unified mode show a banner
+    if (!right.querySelector('.unified-banner')) {
+      const banner = document.createElement('div');
+      banner.className = 'unified-banner';
+      banner.style.cssText = 'padding:8px 16px;background:var(--bg2);border-bottom:1px solid var(--border);font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px';
+      banner.innerHTML = '<i class="ti ti-file-diff" style="font-size:13px"></i> Unified diff — showing right branch with inline changes';
+      right.prepend(banner);
+    }
+  }
+}
+
+// ── HIGHLIGHT ─────────────────────────────────────────────────────────────────
+function toggleHighlight(btn) {
+  state.highlight = !state.highlight;
+  btn.classList.toggle('active', state.highlight);
+  applyHighlight();
+}
+
+function applyHighlight() {
+  const panels = document.getElementById('panels');
+  const diffEls = panels.querySelectorAll('.diff-wrap-add,.diff-wrap-del,.diff-wrap-mod,.inline-add,.inline-del');
+  diffEls.forEach(el => {
+    el.style.opacity = state.highlight ? '' : '1';
+    if (!state.highlight) {
+      if (el.classList.contains('diff-wrap-add')) el.style.borderLeft = 'none';
+      if (el.classList.contains('diff-wrap-del')) el.style.borderLeft = 'none';
+      if (el.classList.contains('diff-wrap-mod')) el.style.borderLeft = 'none';
+      if (el.classList.contains('inline-add') || el.classList.contains('inline-del')) {
+        el.style.background = 'transparent';
+        el.style.textDecoration = 'none';
+      }
+    } else {
+      el.style.borderLeft = '';
+      el.style.background = '';
+      el.style.textDecoration = '';
+    }
+  });
+}
+
+// ── COLLAPSE ──────────────────────────────────────────────────────────────────
+function toggleCollapse(btn) {
+  state.collapse = !state.collapse;
+  btn.classList.toggle('active', state.collapse);
+  // Simple: hide paragraphs that aren't diff-wrapped
+  const paras = document.querySelectorAll('#panels .adoc-p:not([class*="diff-wrap"]), #panels .adoc-listing:not([class*="diff-wrap"])');
+  paras.forEach(p => { p.style.display = state.collapse ? 'none' : ''; });
+}
+
+// ── SCROLL SYNC ───────────────────────────────────────────────────────────────
+let syncEnabled = true;
+function toggleSync(btn) {
+  state.syncScroll = !state.syncScroll;
+  syncEnabled = state.syncScroll;
+  btn.classList.toggle('active', state.syncScroll);
+}
+
+function setupScrollSync() {
+  const left = document.getElementById('panel-left');
+  const right = document.getElementById('panel-right');
+  left.onscroll = () => {
+    if (!syncEnabled || state.syncing) return;
+    state.syncing = true;
+    const ratio = left.scrollTop / (left.scrollHeight - left.clientHeight || 1);
+    right.scrollTop = ratio * (right.scrollHeight - right.clientHeight);
+    requestAnimationFrame(() => state.syncing = false);
+  };
+  right.onscroll = () => {
+    if (!syncEnabled || state.syncing) return;
+    state.syncing = true;
+    const ratio = right.scrollTop / (right.scrollHeight - right.clientHeight || 1);
+    left.scrollTop = ratio * (left.scrollHeight - left.clientHeight);
+    requestAnimationFrame(() => state.syncing = false);
+  };
+}
+
+// ── JUMP DIFFS ────────────────────────────────────────────────────────────────
+function jumpDiff(dir) {
+  const diffs = Array.from(document.querySelectorAll('#panel-right .diff-wrap-add, #panel-right .diff-wrap-del, #panel-right .diff-wrap-mod'));
+  if (!diffs.length) return;
+  state.currentDiffIdx = Math.max(-1, Math.min(diffs.length - 1, state.currentDiffIdx + dir));
+  if (state.currentDiffIdx < 0) state.currentDiffIdx = 0;
+  diffs[state.currentDiffIdx].scrollIntoView({ behavior:'smooth', block:'center' });
+  // Flash
+  const el = diffs[state.currentDiffIdx];
+  const orig = el.style.outline;
+  el.style.outline = '2px solid var(--amber)';
+  setTimeout(() => { el.style.outline = orig; }, 600);
+}
+
+// ── BRANCH MODAL ──────────────────────────────────────────────────────────────
+let tempLeft = '', tempRight = '';
+function openBranchModal() {
+  tempLeft = state.leftBranch;
+  tempRight = state.rightBranch;
+  renderBranchLists('', '');
+  document.getElementById('branch-modal').classList.add('open');
+}
+function closeBranchModal() {
+  document.getElementById('branch-modal').classList.remove('open');
+}
+
+function renderBranchLists(filterL, filterR) {
+  renderSideList('list-left', 'left', filterL);
+  renderSideList('list-right', 'right', filterR);
+}
+
+function renderSideList(id, side, filter) {
+  const el = document.getElementById(id);
+  const sel = side === 'left' ? tempLeft : tempRight;
+  const branches = BRANCHES.filter(b => b.type === 'branch' && b.name.includes(filter));
+  const tags = BRANCHES.filter(b => b.type === 'tag' && b.name.includes(filter));
+  let html = '';
+  if (branches.length) {
+    html += `<div class="bl-section">Branches</div>`;
+    branches.forEach(b => {
+      const isSel = b.name === sel;
+      html += `<div class="bl-item${isSel ? ` sel-${side}` : ''}" onclick="selectBranch('${side}','${b.name}','${b.hash}')">
+        <div class="check-icon ${isSel ? `ci-${side}` : 'ci-empty'}">${isSel ? '✓' : ''}</div>
+        <span class="bl-name">${b.name}</span>
+        <span class="bl-hash">${b.hash}</span>
+      </div>`;
+    });
+  }
+  if (tags.length) {
+    html += `<div class="bl-section">Tags</div>`;
+    tags.forEach(b => {
+      const isSel = b.name === sel;
+      html += `<div class="bl-item${isSel ? ` sel-${side}` : ''}" onclick="selectBranch('${side}','${b.name}','${b.hash}')">
+        <div class="check-icon ${isSel ? `ci-${side}` : 'ci-empty'}">${isSel ? '✓' : ''}</div>
+        <span class="bl-name">${b.name}</span>
+        <span class="bl-hash">${b.hash}</span>
+      </div>`;
+    });
+  }
+  el.innerHTML = html || '<div style="padding:12px;text-align:center;font-size:11px;color:var(--text3)">No results</div>';
+}
+
+function selectBranch(side, name, hash) {
+  if (side === 'left') { tempLeft = name; document.getElementById('cs-left').textContent = hash; }
+  else { tempRight = name; document.getElementById('cs-right').textContent = hash; }
+  const filterL = document.getElementById('search-left').value;
+  const filterR = document.getElementById('search-right').value;
+  renderBranchLists(filterL, filterR);
+}
+
+function filterBranches(side, val) {
+  const filterL = document.getElementById('search-left').value;
+  const filterR = document.getElementById('search-right').value;
+  renderBranchLists(filterL, filterR);
+}
+
+function applyBranchSelection() {
+  state.leftBranch = tempLeft;
+  state.rightBranch = tempRight;
+  document.getElementById('label-left').textContent = state.leftBranch;
+  document.getElementById('label-right').textContent = state.rightBranch;
+  document.getElementById('sb-branches').textContent = `${state.leftBranch} ⇄ ${state.rightBranch}`;
+  closeBranchModal();
+  renderPanels();
+}
+
+function swapBranches() {
+  [state.leftBranch, state.rightBranch] = [state.rightBranch, state.leftBranch];
+  document.getElementById('label-left').textContent = state.leftBranch;
+  document.getElementById('label-right').textContent = state.rightBranch;
+  document.getElementById('sb-branches').textContent = `${state.leftBranch} ⇄ ${state.rightBranch}`;
+  renderPanels();
+}
+
+// close modal on backdrop click
+document.getElementById('branch-modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('branch-modal')) closeBranchModal();
+});
+
+// ── SETTINGS ──────────────────────────────────────────────────────────────────
+const SETTINGS_TABS = {
+  rendering: () => `
+    <div class="s-section">
+      <div class="s-section-title">AsciiDoc rendering</div>
+      <div class="s-row"><div class="s-label"><p>Backend</p><span>Rendering engine for HTML output</span></div><select class="s-select"><option>Asciidoctor.js (browser)</option><option>Asciidoctor (native)</option></select></div>
+      <div class="s-row"><div class="s-label"><p>Safe mode</p><span>Controls which features are allowed</span></div><select class="s-select"><option>unsafe</option><option>safe</option><option>server</option><option>secure</option></select></div>
+      <div class="s-row"><div class="s-label"><p>Resolve <code style="font-family:var(--mono);font-size:10px;background:var(--bg3);padding:1px 4px;border-radius:3px;color:#a5b4fc">include::</code> directives</p><span>Follow include paths relative to repo root</span></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="s-row"><div class="s-label"><p>Evaluate <code style="font-family:var(--mono);font-size:10px;background:var(--bg3);padding:1px 4px;border-radius:3px;color:#a5b4fc">ifdef::</code> conditionals</p><span>Process preprocessor conditionals before diffing</span></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="s-row"><div class="s-label"><p>Custom attributes</p><span>Comma-separated key=value pairs for the renderer</span></div><input type="text" style="height:28px;padding:0 8px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:11px;width:200px;outline:none" value="version=2.0, env=prod"></div>
+    </div>`,
+  includes: () => `
+    <div class="s-section">
+      <div class="s-section-title">Include resolution</div>
+      <div class="s-row"><div class="s-label"><p>Base directory</p><span>Root path used to resolve include:: paths</span></div><input type="text" style="height:28px;padding:0 8px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:11px;width:200px;outline:none" value="./docs"></div>
+      <div class="s-row"><div class="s-label"><p>Resolve from git object store</p><span>Read include targets from the git history, not disk</span></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="s-row"><div class="s-label"><p>Show unresolved includes</p><span>Display a warning banner for broken include paths</span></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="s-row"><div class="s-label"><p>Max include depth</p><span>Prevent infinite include loops</span></div><select class="s-select"><option>4</option><option>8</option><option>16</option><option>Unlimited</option></select></div>
+    </div>`,
+  git: () => `
+    <div class="s-section">
+      <div class="s-section-title">Git integration</div>
+      <div class="s-row"><div class="s-label"><p>Default base branch</p><span>Branch to compare against by default</span></div><input type="text" style="height:28px;padding:0 8px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:var(--mono);font-size:11px;width:160px;outline:none" value="main"></div>
+      <div class="s-row"><div class="s-label"><p>Auto-refresh on branch change</p><span>Re-render when the git HEAD changes</span></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="s-row"><div class="s-label"><p>Show commit metadata</p><span>Display author, date, and message in the header</span></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+    </div>`,
+  syntax: () => `
+    <div class="s-section">
+      <div class="s-section-title">Syntax highlighting</div>
+      <div class="s-row"><div class="s-label"><p>Highlighter</p><span>Library used for code block coloring</span></div><select class="s-select"><option>Rouge (built-in)</option><option>highlight.js</option><option>Prism</option><option>None</option></select></div>
+      <div class="s-row"><div class="s-label"><p>Theme</p><span>Color theme for code blocks</span></div><select class="s-select"><option>Monokai</option><option>GitHub Dark</option><option>One Dark</option><option>Dracula</option></select></div>
+      <div class="s-row"><div class="s-label"><p>Show line numbers</p><span>Prefix code lines with their line number</span></div><div class="toggle" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="s-row"><div class="s-label"><p>Word-wrap in code blocks</p><span>Wrap long lines instead of scrolling</span></div><div class="toggle" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+    </div>`,
+  diff: () => `
+    <div class="s-section">
+      <div class="s-section-title">Diff display</div>
+      <div class="s-row"><div class="s-label"><p>Granularity</p><span>How precisely inline changes are highlighted</span></div><select class="s-select"><option>Word-level</option><option>Character-level</option><option>Block-level</option></select></div>
+      <div class="s-row"><div class="s-label"><p>Ignore whitespace</p><span>Treat whitespace-only changes as equal</span></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+      <div class="s-row"><div class="s-label"><p>Context lines</p><span>Unchanged lines shown around each change</span></div><select class="s-select"><option>3</option><option>5</option><option>10</option><option>All</option></select></div>
+      <div class="s-row"><div class="s-label"><p>Synchronized scrolling</p><span>Keep both panels at the same scroll position</span></div><div class="toggle on" onclick="this.classList.toggle('on')"><div class="toggle-knob"></div></div></div>
+    </div>`,
+  keys: () => `
+    <div class="s-section">
+      <div class="s-section-title">Keyboard shortcuts</div>
+      <div class="shortcuts-grid">
+        <div class="shortcut-row"><span>Next diff</span><span><span class="kbd">⌘</span> <span class="kbd">↓</span></span></div>
+        <div class="shortcut-row"><span>Previous diff</span><span><span class="kbd">⌘</span> <span class="kbd">↑</span></span></div>
+        <div class="shortcut-row"><span>Toggle view mode</span><span><span class="kbd">⌘</span> <span class="kbd">\\</span></span></div>
+        <div class="shortcut-row"><span>Open branch picker</span><span><span class="kbd">⌘</span> <span class="kbd">B</span></span></div>
+        <div class="shortcut-row"><span>Swap branches</span><span><span class="kbd">⌘</span> <span class="kbd">S</span></span></div>
+        <div class="shortcut-row"><span>Toggle highlight</span><span><span class="kbd">⌘</span> <span class="kbd">H</span></span></div>
+        <div class="shortcut-row"><span>Collapse unchanged</span><span><span class="kbd">⌘</span> <span class="kbd">U</span></span></div>
+        <div class="shortcut-row"><span>Toggle sidebar</span><span><span class="kbd">⌘</span> <span class="kbd">E</span></span></div>
+        <div class="shortcut-row"><span>Settings</span><span><span class="kbd">⌘</span> <span class="kbd">,</span></span></div>
+        <div class="shortcut-row"><span>Close modal</span><span><span class="kbd">Esc</span></span></div>
+      </div>
+    </div>`,
+  appearance: () => `
+    <div class="s-section">
+      <div class="s-section-title">Appearance</div>
+      <div class="s-row"><div class="s-label"><p>Theme</p><span>Application color theme</span></div><select class="s-select"><option>Dark (default)</option><option>Light</option><option>System</option></select></div>
+      <div class="s-row"><div class="s-label"><p>Font size</p><span>Base font size for rendered documents</span></div><select class="s-select"><option>12px</option><option selected>13px</option><option>14px</option><option>15px</option></select></div>
+      <div class="s-row"><div class="s-label"><p>Line height</p><span>Spacing between lines in rendered text</span></div><select class="s-select"><option>1.5</option><option selected>1.75</option><option>2.0</option></select></div>
+      <div class="s-row"><div class="s-label"><p>Sidebar width</p><span>Width of the file tree sidebar in pixels</span></div><select class="s-select"><option>180px</option><option selected>220px</option><option>260px</option></select></div>
+    </div>`
+};
+
+function openSettings() {
+  document.getElementById('settings-overlay').classList.add('open');
+  renderSettingsTab('rendering');
+}
+function closeSettings() {
+  document.getElementById('settings-overlay').classList.remove('open');
+}
+function setSettingsTab(tab, el) {
+  document.querySelectorAll('.sn-item').forEach(i => i.classList.remove('active'));
+  el.classList.add('active');
+  renderSettingsTab(tab);
+}
+function renderSettingsTab(tab) {
+  document.getElementById('settings-body').innerHTML = (SETTINGS_TABS[tab] || SETTINGS_TABS.rendering)();
+}
+document.getElementById('settings-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('settings-overlay')) closeSettings();
+});
+
+// ── KEYBOARD SHORTCUTS ────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey) {
+    if (e.key === 'b') { e.preventDefault(); openBranchModal(); }
+    if (e.key === ',') { e.preventDefault(); openSettings(); }
+    if (e.key === 's') { e.preventDefault(); swapBranches(); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); jumpDiff(1); }
+    if (e.key === 'ArrowUp') { e.preventDefault(); jumpDiff(-1); }
+    if (e.key === 'e') { e.preventDefault(); document.getElementById('sidebar').classList.toggle('collapsed'); }
+  }
+  if (e.key === 'Escape') { closeBranchModal(); closeSettings(); }
+});
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+renderFileTree();
+renderPanels();
+</script>
+</body>
+</html>

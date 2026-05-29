@@ -1,0 +1,81 @@
+- generic [ref=e3]:
+  - generic [ref=e4]:
+    - generic [ref=e9]: AsciiDiff
+    - generic [ref=e10]: ›
+    - generic [ref=e11]: No file selected
+  - generic [ref=e12]:
+    - button "﫷 Open repo" [ref=e14] [cursor=pointer]:
+      - generic [ref=e15]: 﫷
+      - generic [ref=e16]: Open repo
+    - button " main " [ref=e18] [cursor=pointer]:
+      - generic [ref=e20]: 
+      - generic [ref=e21]: main
+      - generic [ref=e22]: 
+    - button "&8652;" [ref=e23] [cursor=pointer]
+    - button " — " [ref=e24] [cursor=pointer]:
+      - generic [ref=e26]: 
+      - generic [ref=e27]: —
+      - generic [ref=e28]: 
+    - generic [ref=e30]:
+      - button " Split" [ref=e31] [cursor=pointer]:
+        - generic [ref=e32]: 
+        - text: Split
+      - button " Unified" [ref=e33] [cursor=pointer]:
+        - generic [ref=e34]: 
+        - text: Unified
+      - button " Preview" [ref=e35] [cursor=pointer]:
+        - generic [ref=e36]: 
+        - text: Preview
+    - button " Highlight" [ref=e38] [cursor=pointer]:
+      - generic [ref=e39]: 
+      - text: Highlight
+    - button " Collapse unchanged" [ref=e40] [cursor=pointer]:
+      - generic [ref=e41]: 
+      - text: Collapse unchanged
+    - button " Sync scroll" [ref=e42] [cursor=pointer]:
+      - generic [ref=e43]: 
+      - text: Sync scroll
+    - generic [ref=e44]:
+      - generic [ref=e45]: +0 added
+      - generic [ref=e46]: −0 removed
+      - generic [ref=e47]: ~0 modified
+    - button "" [ref=e49] [cursor=pointer]:
+      - generic [ref=e50]: 
+  - generic [ref=e51]:
+    - generic [ref=e52]:
+      - generic [ref=e53]:
+        - generic [ref=e54]: 
+        - generic [ref=e55]: Changed files
+      - generic [ref=e57]:
+        - generic [ref=e58]: 
+        - paragraph [ref=e59]: Open a repository and select branches to compare
+    - generic [ref=e60]:
+      - generic [ref=e61]:
+        - generic [ref=e62]:
+          - generic [ref=e63]: 
+          - generic [ref=e64]: main
+          - generic [ref=e65]:
+            - button "" [ref=e66] [cursor=pointer]:
+              - generic [ref=e67]: 
+            - button "" [ref=e68] [cursor=pointer]:
+              - generic [ref=e69]: 
+        - generic [ref=e70]:
+          - generic [ref=e71]: 
+          - generic [ref=e72]: —
+      - generic [ref=e73]:
+        - generic [ref=e75]:
+          - generic [ref=e76]: 
+          - paragraph [ref=e77]: Select a file to view
+        - generic [ref=e79]:
+          - generic [ref=e80]: 
+          - paragraph [ref=e81]: Select a file to view
+  - generic [ref=e82]:
+    - generic [ref=e83]: 0 additions
+    - generic [ref=e85]: 0 deletions
+    - generic [ref=e87]: 0 modifications
+    - generic [ref=e89]:
+      - generic [ref=e90]: 
+      - text: —
+    - generic [ref=e91]:
+      - generic [ref=e92]: 
+      - text: main ⇆ —
