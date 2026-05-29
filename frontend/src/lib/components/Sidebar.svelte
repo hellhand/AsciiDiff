@@ -1,11 +1,34 @@
 <script lang="ts">
   import { appState } from '../stores/app';
+  import { invoke } from '@tauri-apps/api/core';
 
   let { collapsed }: { collapsed: boolean } = $props();
   let state = $derived($appState);
 
-  function selectFile(idx: number) {
+  async function selectFile(idx: number) {
     appState.update(s => ({ ...s, activeFileIdx: idx }));
+
+    const currentState = $appState;
+    const file = currentState.changedFiles[idx];
+    if (!file || !currentState.repoPath) return;
+
+    try {
+      const result: any = await invoke('render_diff', {
+        repoPath: currentState.repoPath,
+        leftRef: currentState.leftBranch,
+        rightRef: currentState.rightBranch,
+        filePath: file.path,
+      });
+      appState.update(s => ({
+        ...s,
+        leftContent: result.left_html,
+        rightContent: result.right_html,
+        leftExists: result.left_exists,
+        rightExists: result.right_exists,
+      }));
+    } catch (e) {
+      console.error('Failed to render diff:', e);
+    }
   }
 
   const iconMap: Record<string, string> = {

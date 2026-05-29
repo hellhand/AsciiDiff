@@ -29,18 +29,36 @@
     });
 
     // Fetch changed files
-    if (state.repoPath && tempLeft && tempRight) {
+    const currentState = $appState;
+    if (currentState.repoPath && tempLeft && tempRight) {
       try {
-        const files = await invoke('list_changed_files', {
-          repoPath: state.repoPath,
+        const files: any[] = await invoke('list_changed_files', {
+          repoPath: currentState.repoPath,
           leftRef: tempLeft,
           rightRef: tempRight,
         });
         appState.update(s => {
-          s.changedFiles = files as any[];
+          s.changedFiles = files;
           s.activeFileIdx = 0;
           return s;
         });
+
+        // Auto-render the first file
+        if (files.length > 0) {
+          const result: any = await invoke('render_diff', {
+            repoPath: currentState.repoPath,
+            leftRef: tempLeft,
+            rightRef: tempRight,
+            filePath: files[0].path,
+          });
+          appState.update(s => ({
+            ...s,
+            leftContent: result.left_html,
+            rightContent: result.right_html,
+            leftExists: result.left_exists,
+            rightExists: result.right_exists,
+          }));
+        }
       } catch (e) {
         console.error('Failed to list changed files:', e);
       }

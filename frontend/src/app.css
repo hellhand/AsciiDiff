@@ -43,3 +43,68 @@ input { font-family: var(--font); }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--bg5); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+/* Rendered AsciiDoc content */
+.rendered { padding: 24px 28px; max-width: 100%; }
+.adoc-title { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 4px; letter-spacing: -.01em; }
+.adoc-author { font-size: 12px; color: var(--text3); margin-bottom: 20px; display: flex; gap: 12px; }
+.adoc-h1 { font-size: 18px; font-weight: 600; color: var(--text); margin: 24px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.adoc-h2 { font-size: 15px; font-weight: 600; color: var(--text); margin: 18px 0 8px; }
+.adoc-h3 { font-size: 13px; font-weight: 500; color: var(--text2); margin: 14px 0 6px; }
+.adoc-p { color: var(--text2); margin-bottom: 10px; line-height: 1.75; }
+.adoc-p code, .adoc-code-inline { font-family: var(--mono); font-size: 11px; background: var(--bg3); border: 1px solid var(--border); padding: 1px 5px; border-radius: 3px; color: #a5b4fc; }
+.adoc-ul { padding-left: 18px; margin-bottom: 10px; }
+.adoc-ul li { color: var(--text2); margin-bottom: 4px; line-height: 1.65; }
+.adoc-ol { padding-left: 18px; margin-bottom: 10px; }
+.adoc-ol li { color: var(--text2); margin-bottom: 4px; }
+
+.adoc-note, .adoc-warn, .adoc-tip, .adoc-important {
+  padding: 10px 14px; border-radius: 0 var(--radius) var(--radius) 0;
+  margin: 12px 0; font-size: 12px; line-height: 1.6;
+}
+.adoc-note { background: rgba(99,102,241,.1); border-left: 3px solid var(--accent); color: #c7d2fe; }
+.adoc-note strong { color: #a5b4fc; }
+.adoc-warn { background: var(--amber-dim); border-left: 3px solid var(--amber); color: #fde68a; }
+.adoc-warn strong { color: var(--amber); }
+.adoc-tip { background: var(--green-dim); border-left: 3px solid var(--green); color: #bbf7d0; }
+.adoc-tip strong { color: var(--green); }
+.adoc-important { background: var(--red-dim); border-left: 3px solid var(--red); color: #fecaca; }
+.adoc-important strong { color: var(--red); }
+
+.adoc-listing {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); margin: 12px 0; overflow: hidden;
+}
+.adoc-listing-title {
+  padding: 6px 14px; font-size: 10px; font-weight: 600; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--text3); background: var(--bg3);
+  border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 6px;
+}
+.adoc-listing-title .lang-badge {
+  padding: 1px 6px; background: var(--accent-dim); color: #a5b4fc;
+  border-radius: 4px; font-size: 10px; text-transform: none; letter-spacing: 0;
+}
+pre.adoc-pre {
+  padding: 14px 16px; font-family: var(--mono); font-size: 11px;
+  color: var(--text2); overflow-x: auto; line-height: 1.7; background: transparent;
+}
+
+.adoc-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12px; }
+.adoc-table thead tr { background: var(--bg3); }
+.adoc-table th { padding: 8px 12px; text-align: left; font-weight: 600; color: var(--text); border: 1px solid var(--border); font-size: 11px; letter-spacing: .02em; }
+.adoc-table td { padding: 7px 12px; border: 1px solid var(--border); color: var(--text2); }
+.adoc-table tbody tr:hover { background: var(--bg2); }
+
+.adoc-include {
+  display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius);
+  font-family: var(--mono); font-size: 11px; color: var(--text3); margin: 8px 0;
+}
+.adoc-include .inc-path { color: #a5b4fc; }
+
+/* Diff highlighting */
+.diff-wrap-add { background: var(--green-dim); border-left: 2px solid var(--green); padding-left: 8px; margin-left: -10px; border-radius: 0 3px 3px 0; }
+.diff-wrap-del { background: var(--red-dim); border-left: 2px solid var(--red); padding-left: 8px; margin-left: -10px; border-radius: 0 3px 3px 0; opacity: .75; }
+.diff-wrap-mod { background: var(--amber-dim); border-left: 2px solid var(--amber); padding-left: 8px; margin-left: -10px; border-radius: 0 3px 3px 0; }
+.inline-del { background: rgba(239,68,68,0.25); color: #fca5a5; border-radius: 2px; padding: 0 2px; text-decoration: line-through; }
+.inline-add { background: rgba(34,197,94,0.2); color: #86efac; border-radius: 2px; padding: 0 2px; }
