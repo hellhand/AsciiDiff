@@ -66,6 +66,9 @@ jobs:
       - name: Build Windows bundles
         run: npx tauri build --bundles nsis,msi
         working-directory: frontend
+        env:
+          CARGO_NET_RETRY: "10"
+          CARGO_HTTP_CHECK_REVOKE: "false"
 
       - uses: actions/upload-artifact@v4
         with:
