@@ -1,0 +1,254 @@
+= AsciiDiff User Guide
+:author: AsciiDiff Team
+:revnumber: 0.1.0
+:toc: left
+:toclevels: 3
+:icons: font
+:source-highlighter: rouge
+:experimental:
+
+== Introduction
+
+AsciiDiff is a desktop application for comparing rendered AsciiDoc files across git branches, commits, and tags.
+Unlike plain text diff tools, AsciiDiff renders your `.adoc` files into styled HTML and highlights differences at the document-structure level -- headings, paragraphs, code blocks, tables, and admonitions are compared semantically.
+
+=== Key Features
+
+* *Side-by-side rendered diff* -- see both versions as formatted documents with inline change markers
+* *Git-native* -- compare any branch, tag, or commit reference
+* *Multiple view modes* -- Split, Unified, or Preview
+* *Keyboard-driven* -- full keyboard shortcut support
+* *Include resolution* -- `include::` directives are resolved from the git object store
+* *Configurable* -- rendering backend, diff granularity, themes, and more
+
+== Getting Started
+
+=== Prerequisites
+
+The following must be installed on your system:
+
+|===
+| Dependency | Version | Purpose
+
+| Rust | 1.77+ | Backend compilation
+| Node.js | 20+ | Frontend build
+| npm | 9+ | Package management
+| Tauri CLI | 2.x | Application framework
+|===
+
+On Linux, you also need WebKit and GTK development libraries:
+
+[source,bash]
+----
+sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev \
+  libayatana-appindicator3-dev librsvg2-dev
+----
+
+=== Installation
+
+Clone the repository and install dependencies:
+
+[source,bash]
+----
+git clone https://github.com/your-org/asciidiff.git
+cd asciidiff
+make install
+----
+
+=== Running in Development Mode
+
+[source,bash]
+----
+make dev
+----
+
+This starts the Vite dev server with hot-reload and launches the Tauri window.
+
+=== Building for Production
+
+[source,bash]
+----
+make build
+----
+
+The platform-specific binary is output to `frontend/src-tauri/target/release/`.
+
+== Usage
+
+=== Opening a Repository
+
+. Click btn:[Open repo] in the toolbar or use the keyboard shortcut
+. Select a folder containing a git repository
+. The app reads branches, tags, and the file tree
+
+=== Comparing Branches
+
+. Click either branch pill in the toolbar (or press kbd:[Ctrl+B])
+. In the modal, select a *Base* branch (left panel) and a *Compare* branch (right panel)
+. Use the search fields to filter by name
+. Click btn:[Compare branches] to load the diff
+
+The sidebar populates with all changed `.adoc` files grouped by status:
+
+* *Modified* -- content differs between branches
+* *Added* -- file exists only in the compare branch
+* *Deleted* -- file exists only in the base branch
+
+=== View Modes
+
+|===
+| Mode | Shortcut | Description
+
+| Split | _(default)_ | Side-by-side panels showing both versions
+| Unified | | Single panel with interleaved changes
+| Preview | | Right panel only (compare branch rendered output)
+|===
+
+Switch modes using the toolbar buttons or kbd:[Ctrl+\\].
+
+=== Navigating Changes
+
+* kbd:[Ctrl+↓] -- jump to next change
+* kbd:[Ctrl+↑] -- jump to previous change
+
+The active change is briefly highlighted with an amber outline.
+
+=== Toolbar Controls
+
+[cols="1,2"]
+|===
+| Control | Function
+
+| *Highlight* | Toggle diff highlighting (colored borders and inline markers)
+| *Collapse unchanged* | Hide sections with no changes
+| *Sync scroll* | Keep both panels scrolled to the same relative position
+| *Swap* (⇄) | Swap left and right branches
+|===
+
+=== Keyboard Shortcuts
+
+|===
+| Shortcut | Action
+
+| kbd:[Ctrl+B] | Open branch picker
+| kbd:[Ctrl+S] | Swap branches
+| kbd:[Ctrl+E] | Toggle sidebar
+| kbd:[Ctrl+,] | Open settings
+| kbd:[Ctrl+↓] | Next diff
+| kbd:[Ctrl+↑] | Previous diff
+| kbd:[Escape] | Close modal / settings
+|===
+
+== Settings
+
+Open settings with kbd:[Ctrl+,] or the gear icon.
+
+=== Rendering
+
+* *Backend* -- Choose between browser-based (Asciidoctor.js) or native rendering
+* *Safe mode* -- Controls which AsciiDoc features are allowed
+* *Resolve includes* -- Follow `include::` paths relative to repo root
+* *Evaluate conditionals* -- Process `ifdef::` / `ifndef::` directives
+
+=== Includes
+
+* *Base directory* -- Root path for resolving include targets
+* *Git object store* -- Read includes from git history (not working directory)
+* *Max depth* -- Prevent infinite recursion from circular includes
+
+=== Git
+
+* *Default base branch* -- Branch used as left panel when opening a repo
+* *Auto-refresh* -- Re-render when HEAD changes
+* *Show commit metadata* -- Display author and date in panel headers
+
+=== Diff Display
+
+* *Granularity* -- Word-level, character-level, or block-level
+* *Ignore whitespace* -- Skip whitespace-only differences
+* *Context lines* -- How many unchanged lines to show around each change
+
+=== Appearance
+
+* *Theme* -- Dark (default), Light, or System
+* *Font size* -- 12px to 15px
+* *Line height* -- 1.5 to 2.0
+* *Sidebar width* -- 180px to 260px
+
+== Architecture
+
+AsciiDiff is built with a Rust backend and a Svelte 5 frontend, packaged as a native desktop app via Tauri v2.
+
+[source]
+----
+┌────────────────────────────────────────────────┐
+│                 Tauri Shell                     │
+├──────────────────────┬─────────────────────────┤
+│   Svelte 5 Frontend  │     Rust Backend        │
+│                      │                         │
+│  • App shell (CSS)   │  • git2: repo access    │
+│  • State management  │  • similar: text diff   │
+│  • Rendered panels   │  • AsciiDoc renderer    │
+│  • Modals/settings   │  • Tauri commands       │
+└──────────────────────┴─────────────────────────┘
+----
+
+=== Tauri Commands
+
+|===
+| Command | Description
+
+| `open_repository` | Opens a git repo and returns branches/tags
+| `list_changed_files` | Diffs two refs, returns changed file paths
+| `get_file_content` | Reads a file at a specific git ref
+| `render_diff` | Renders both versions to HTML with diff markers
+|===
+
+== Testing
+
+=== Creating a Test Repository
+
+[source,bash]
+----
+make test-repo
+----
+
+This runs `scripts/create-test-repo.sh` which creates a git repo at `./test-repo/` with:
+
+* Branch `main` -- baseline documentation (v1.4)
+* Branch `feature/v2` -- updated architecture with service mesh
+* Tag `v1.4.0` -- on the main branch
+
+=== Running Tests
+
+[source,bash]
+----
+# All tests
+make test
+
+# Rust unit tests only (7 tests)
+make test-rust
+
+# Playwright e2e tests only (24 tests)
+make test-e2e
+----
+
+=== What the Tests Cover
+
+* App shell rendering (titlebar, toolbar, sidebar, panels, statusbar)
+* View mode switching (split, unified, preview)
+* Branch modal (open, close, search, keyboard shortcuts)
+* Settings modal (open, close, tab navigation)
+* Toolbar toggle states (highlight, collapse, sync scroll)
+
+== Contributing
+
+. Fork the repository
+. Create a feature branch: `git checkout -b feature/my-change`
+. Make your changes
+. Run tests: `make test`
+. Submit a pull request
+
+== License
+
+MIT
