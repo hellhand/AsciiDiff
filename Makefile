@@ -1,4 +1,4 @@
-.PHONY: dev build test test-rust test-e2e install clean
+.PHONY: dev build test test-rust test-e2e install clean test-repo
 
 # Install all dependencies
 install:
@@ -27,6 +27,10 @@ test-e2e:
 # Frontend-only dev server (no Tauri backend)
 dev-web:
 	cd frontend && npm run dev
+
+# Create test repository for manual testing
+test-repo:
+	./scripts/create-test-repo.sh
 
 # Clean build artifacts
 clean:
