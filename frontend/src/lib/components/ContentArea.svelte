@@ -5,7 +5,6 @@
   let state = $derived($appState);
   let panelLeft = $state<HTMLElement | null>(null);
   let panelRight = $state<HTMLElement | null>(null);
-  let syncing = false;
   let splitPercent = $state(50);
   let dragging = $state(false);
   let panelsEl: HTMLElement;
@@ -36,20 +35,24 @@
     const right = panelRight;
     if (!left || !right) return;
 
-    left.onscroll = () => {
-      if (!state.syncScroll || syncing) return;
-      syncing = true;
-      const ratio = left.scrollTop / (left.scrollHeight - left.clientHeight || 1);
-      right.scrollTop = ratio * (right.scrollHeight - right.clientHeight);
-      requestAnimationFrame(() => syncing = false);
-    };
+    // Sync scroll using wheel events — these only fire on user input,
+    // not on programmatic scrollTop changes, so no feedback loop is possible.
+    function onWheelLeft(e: WheelEvent) {
+      if (!state.syncScroll) return;
+      right.scrollTop = left.scrollTop + e.deltaY;
+    }
 
-    right.onscroll = () => {
-      if (!state.syncScroll || syncing) return;
-      syncing = true;
-      const ratio = right.scrollTop / (right.scrollHeight - right.clientHeight || 1);
-      left.scrollTop = ratio * (left.scrollHeight - left.clientHeight);
-      requestAnimationFrame(() => syncing = false);
+    function onWheelRight(e: WheelEvent) {
+      if (!state.syncScroll) return;
+      left.scrollTop = right.scrollTop + e.deltaY;
+    }
+
+    left.addEventListener('wheel', onWheelLeft, { passive: true });
+    right.addEventListener('wheel', onWheelRight, { passive: true });
+
+    return () => {
+      left.removeEventListener('wheel', onWheelLeft);
+      right.removeEventListener('wheel', onWheelRight);
     };
   });
 

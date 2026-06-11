@@ -66,8 +66,22 @@
     // Disable drag-and-drop of links/images (browser behavior)
     document.addEventListener('dragstart', (e) => e.preventDefault());
 
+    // Workaround for webkit2gtk repaint bug: the WebView sometimes fails to
+    // repaint after DOM changes until a resize/scroll forces a
+    // recomposite. Nudge the compositor on every click and scroll.
+    const forceRepaint = () => {
+      document.documentElement.style.opacity = '0.999';
+      requestAnimationFrame(() => {
+        document.documentElement.style.opacity = '';
+      });
+    };
+    document.addEventListener('click', forceRepaint, true);
+    document.addEventListener('scroll', forceRepaint, true);
+
     return () => {
       document.removeEventListener('keydown', handleKeydown);
+      document.removeEventListener('click', forceRepaint, true);
+      document.removeEventListener('scroll', forceRepaint, true);
     };
   });
 </script>

@@ -1,4 +1,4 @@
-use similar::{ChangeTag, TextDiff};
+use crate::git::FileDiffLines;
 
 /// Renders raw AsciiDoc text into basic HTML matching the mock's CSS classes.
 pub fn render_asciidoc(source: &str) -> String {
@@ -7,69 +7,28 @@ pub fn render_asciidoc(source: &str) -> String {
     render_asciidoc_with_changes(&lines, &no_changes, "")
 }
 
-/// Compute a word-level diff between two rendered HTML strings and produce
-/// side-by-side HTML with diff highlighting classes matching the mock.
-pub fn compute_diff_html(left_text: &str, right_text: &str) -> (String, String) {
-    let _left_html = render_asciidoc(left_text);
-    let _right_html = render_asciidoc(right_text);
+/// Produce side-by-side HTML with diff highlighting using git's actual diff hunks.
+/// `diff_lines` contains 1-indexed line numbers from git diff.
+pub fn compute_diff_html(
+    left_text: &str,
+    right_text: &str,
+    diff_lines: &FileDiffLines,
+) -> (String, String) {
+    let left_source_lines: Vec<&str> = left_text.lines().collect();
+    let right_source_lines: Vec<&str> = right_text.lines().collect();
 
-    // For a simple first pass, we diff at the line level of the source text
-    // and then mark which rendered sections have changes
-    let diff = TextDiff::from_lines(left_text, right_text);
+    // Convert 1-indexed line numbers to boolean arrays (0-indexed)
+    let left_changed: Vec<bool> = (0..left_source_lines.len())
+        .map(|i| diff_lines.left_changed.contains(&((i as u32) + 1)))
+        .collect();
+    let right_changed: Vec<bool> = (0..right_source_lines.len())
+        .map(|i| diff_lines.right_changed.contains(&((i as u32) + 1)))
+        .collect();
 
-    let mut left_lines: Vec<(ChangeTag, &str)> = Vec::new();
-    let mut right_lines: Vec<(ChangeTag, &str)> = Vec::new();
+    let left_html = render_asciidoc_with_changes(&left_source_lines, &left_changed, "del");
+    let right_html = render_asciidoc_with_changes(&right_source_lines, &right_changed, "add");
 
-    for change in diff.iter_all_changes() {
-        match change.tag() {
-            ChangeTag::Equal => {
-                left_lines.push((ChangeTag::Equal, change.value()));
-                right_lines.push((ChangeTag::Equal, change.value()));
-            }
-            ChangeTag::Delete => {
-                left_lines.push((ChangeTag::Delete, change.value()));
-            }
-            ChangeTag::Insert => {
-                right_lines.push((ChangeTag::Insert, change.value()));
-            }
-        }
-    }
-
-    // Re-render left with deletions marked
-    let left_marked = render_with_marks(left_text, &left_lines, "del");
-    let right_marked = render_with_marks(right_text, &right_lines, "add");
-
-    (left_marked, right_marked)
-}
-
-/// Renders asciidoc with diff markers applied to changed sections
-fn render_with_marks(source: &str, marked_lines: &[(ChangeTag, &str)], change_type: &str) -> String {
-    // Build a set of line indices that are changed
-    let source_lines: Vec<&str> = source.lines().collect();
-    let mut changed_source_lines: Vec<bool> = vec![false; source_lines.len()];
-
-    let mut src_idx = 0;
-    for (tag, line_content) in marked_lines {
-        let trimmed = line_content.trim_end_matches('\n');
-        match tag {
-            ChangeTag::Equal => {
-                if src_idx < source_lines.len() {
-                    src_idx += 1;
-                }
-            }
-            ChangeTag::Delete | ChangeTag::Insert => {
-                if src_idx < source_lines.len() && source_lines[src_idx] == trimmed {
-                    changed_source_lines[src_idx] = true;
-                    src_idx += 1;
-                } else if src_idx < source_lines.len() {
-                    changed_source_lines[src_idx] = true;
-                }
-            }
-        }
-    }
-
-    // Render using the full renderer with diff class injection
-    render_asciidoc_with_changes(&source_lines, &changed_source_lines, change_type)
+    (left_html, right_html)
 }
 
 /// Full AsciiDoc renderer that optionally wraps changed lines with diff classes.
@@ -232,40 +191,53 @@ fn render_asciidoc_with_changes(lines: &[&str], changed_lines: &[bool], change_t
         }
         // Table
         else if line.starts_with("|===") {
-            let table_start = i;
             i += 1;
-            let mut rows: Vec<Vec<String>> = Vec::new();
+            // Collect rows with their source line indices
+            let mut rows: Vec<(usize, Vec<String>)> = Vec::new(); // (source_line_idx, cells)
             while i < lines.len() && !lines[i].starts_with("|===") {
                 if lines[i].starts_with('|') {
                     let cells: Vec<String> = lines[i][1..]
                         .split('|')
                         .map(|c| c.trim().to_string())
                         .collect();
-                    rows.push(cells);
+                    rows.push((i, cells));
                 }
                 i += 1;
             }
 
-            let table_class = if range_changed(table_start, i + 1) {
-                match change_type {
-                    "del" => " diff-wrap-del",
-                    "add" => " diff-wrap-add",
-                    _ => " diff-wrap-mod",
-                }
-            } else {
-                ""
-            };
-
             if !rows.is_empty() {
-                html.push_str(&format!("<table class=\"adoc-table{}\">", table_class));
-                html.push_str("<thead><tr>");
-                for cell in &rows[0] {
+                html.push_str("<table class=\"adoc-table\">");
+                // Header row
+                let (header_idx, ref header_cells) = rows[0];
+                let header_changed = changed_lines.get(header_idx).copied().unwrap_or(false);
+                let header_class = if header_changed {
+                    match change_type {
+                        "del" => " class=\"diff-wrap-del\"",
+                        "add" => " class=\"diff-wrap-add\"",
+                        _ => " class=\"diff-wrap-mod\"",
+                    }
+                } else {
+                    ""
+                };
+                html.push_str(&format!("<thead><tr{}>", header_class));
+                for cell in header_cells {
                     html.push_str(&format!("<th>{}</th>", inline_format(cell)));
                 }
                 html.push_str("</tr></thead><tbody>");
-                for row in &rows[1..] {
-                    html.push_str("<tr>");
-                    for cell in row {
+                // Data rows
+                for (row_idx, cells) in &rows[1..] {
+                    let row_changed = changed_lines.get(*row_idx).copied().unwrap_or(false);
+                    let row_class = if row_changed {
+                        match change_type {
+                            "del" => " class=\"diff-wrap-del\"",
+                            "add" => " class=\"diff-wrap-add\"",
+                            _ => " class=\"diff-wrap-mod\"",
+                        }
+                    } else {
+                        ""
+                    };
+                    html.push_str(&format!("<tr{}>", row_class));
+                    for cell in cells {
                         html.push_str(&format!("<td>{}</td>", inline_format(cell)));
                     }
                     html.push_str("</tr>");
@@ -534,14 +506,20 @@ mod tests {
     fn test_diff_produces_markers() {
         let left = "= Title\n\nOld paragraph";
         let right = "= Title\n\nNew paragraph";
-        let (_, right_html) = compute_diff_html(left, right);
+        // Line 3 changed on both sides
+        let diff = FileDiffLines {
+            left_changed: vec![3],
+            right_changed: vec![3],
+        };
+        let (_, right_html) = compute_diff_html(left, right, &diff);
         assert!(right_html.contains("diff-wrap-add"));
     }
 
     #[test]
     fn test_diff_equal_content_no_markers() {
         let text = "= Title\n\nSame paragraph";
-        let (left_html, right_html) = compute_diff_html(text, text);
+        let diff = FileDiffLines::default();
+        let (left_html, right_html) = compute_diff_html(text, text, &diff);
         assert!(!left_html.contains("diff-wrap"));
         assert!(!right_html.contains("diff-wrap"));
     }
@@ -550,7 +528,12 @@ mod tests {
     fn test_diff_deleted_line() {
         let left = "= Title\n\nFirst\n\nSecond";
         let right = "= Title\n\nFirst";
-        let (left_html, _) = compute_diff_html(left, right);
+        // Lines 4,5 deleted from left
+        let diff = FileDiffLines {
+            left_changed: vec![4, 5],
+            right_changed: vec![],
+        };
+        let (left_html, _) = compute_diff_html(left, right, &diff);
         assert!(left_html.contains("diff-wrap-del"));
     }
 
@@ -559,7 +542,12 @@ mod tests {
         // When tables change between versions, they should still render as tables in diff mode
         let left = "== Services\n\n|===\n| Name | Port\n\n| API | 8080\n|===";
         let right = "== Services\n\n|===\n| Name | Port\n\n| API | 8080\n| Auth | 9001\n|===";
-        let (_, right_html) = compute_diff_html(left, right);
+        // Line 7 added on right (Auth row), line 8 is |=== shifted
+        let diff = FileDiffLines {
+            left_changed: vec![],
+            right_changed: vec![7],
+        };
+        let (_, right_html) = compute_diff_html(left, right, &diff);
         assert!(right_html.contains("<table"), "Table not rendered in diff mode:\n{}", right_html);
         assert!(right_html.contains("Auth"), "Table data missing in diff mode:\n{}", right_html);
         assert!(right_html.contains("diff-wrap-add"), "Diff marker missing on table:\n{}", right_html);
@@ -569,7 +557,12 @@ mod tests {
     fn test_diff_code_block_rendered() {
         let left = "== Config\n\n[source,yaml]\n----\nport: 8080\n----";
         let right = "== Config\n\n[source,yaml]\n----\nport: 9090\ntimeout: 30s\n----";
-        let (_, right_html) = compute_diff_html(left, right);
+        // Lines 5,6 changed on right
+        let diff = FileDiffLines {
+            left_changed: vec![5],
+            right_changed: vec![5, 6],
+        };
+        let (_, right_html) = compute_diff_html(left, right, &diff);
         assert!(right_html.contains("adoc-listing"), "Code block not rendered in diff mode:\n{}", right_html);
         assert!(right_html.contains("9090"), "Code content missing:\n{}", right_html);
     }
@@ -578,7 +571,12 @@ mod tests {
     fn test_diff_list_rendered() {
         let left = "* Item one\n* Item two";
         let right = "* Item one\n* Item two\n* Item three";
-        let (_, right_html) = compute_diff_html(left, right);
+        // Line 3 added on right
+        let diff = FileDiffLines {
+            left_changed: vec![],
+            right_changed: vec![3],
+        };
+        let (_, right_html) = compute_diff_html(left, right, &diff);
         assert!(right_html.contains("<ul"), "List not rendered in diff mode:\n{}", right_html);
         assert!(right_html.contains("Item three"), "List item missing:\n{}", right_html);
     }

@@ -122,6 +122,59 @@ pub fn read_file_at_ref(
     }
 }
 
+/// Result of a per-file diff: which lines (1-indexed) are deleted on the left and added on the right.
+#[derive(Debug, Serialize, Clone, Default)]
+pub struct FileDiffLines {
+    /// Line numbers in the old file that were deleted or modified (1-indexed)
+    pub left_changed: Vec<u32>,
+    /// Line numbers in the new file that were added or modified (1-indexed)
+    pub right_changed: Vec<u32>,
+}
+
+/// Uses git2's diff to get the exact changed line numbers for a specific file
+/// between two refs. This matches `git diff` output precisely.
+pub fn diff_file_lines(
+    repo_path: &str,
+    left_ref: &str,
+    right_ref: &str,
+    file_path: &str,
+) -> Result<FileDiffLines, git2::Error> {
+    let repo = Repository::open(repo_path)?;
+    let left_tree = resolve_tree(&repo, left_ref)?;
+    let right_tree = resolve_tree(&repo, right_ref)?;
+
+    let mut opts = DiffOptions::new();
+    opts.pathspec(file_path);
+
+    let diff = repo.diff_tree_to_tree(Some(&left_tree), Some(&right_tree), Some(&mut opts))?;
+
+    let mut result = FileDiffLines::default();
+
+    diff.foreach(
+        &mut |_delta, _progress| true,
+        None,
+        None,
+        Some(&mut |_delta, _hunk, line| {
+            match line.origin() {
+                '-' => {
+                    if let Some(n) = line.old_lineno() {
+                        result.left_changed.push(n);
+                    }
+                }
+                '+' => {
+                    if let Some(n) = line.new_lineno() {
+                        result.right_changed.push(n);
+                    }
+                }
+                _ => {} // context lines, no-newline markers, etc.
+            }
+            true
+        }),
+    )?;
+
+    Ok(result)
+}
+
 fn resolve_tree<'a>(
     repo: &'a Repository,
     refspec: &str,
