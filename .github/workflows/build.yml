@@ -24,6 +24,7 @@ jobs:
       - name: Rename AppImage with glibc version
         run: |
           cd frontend/src-tauri/target/release/bundle/appimage
+          sudo chown -R $(id -u):$(id -g) .
           for f in *.AppImage; do
             mv "$f" "${f%.AppImage}-glibc2.31.AppImage"
           done
